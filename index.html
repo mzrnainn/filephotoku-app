@@ -2,8 +2,14 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>FILEPHOTOKU.STD — Capture Your Story</title>
+
+  <!-- Konfigurasi Khusus iPhone (iOS Safari Add to Home Screen / Web App) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FILEPHOTOKU.STD" />
+  <meta name="theme-color" content="#06131A" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -116,6 +122,36 @@
 </head>
 <body class="min-h-screen flex flex-col lg:flex-row selection:bg-terracotta selection:text-white">
 
+  <!-- ==================== MODAL LOGIN ADMIN OS (PENGAMANAN PRIVASI) ==================== -->
+  <div id="modal-admin-login" class="fixed inset-0 z-50 bg-[#06131A]/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-8 shadow-warm-lg border border-[#234B5C] space-y-6 text-center">
+      <div class="w-16 h-16 rounded-3xl bg-cream text-terracotta mx-auto flex items-center justify-center shadow-inner border border-[#DEC9B5]">
+        <i class="ph-fill ph-lock-key text-3xl"></i>
+      </div>
+      <div>
+        <span class="text-[10px] font-bold uppercase tracking-widest text-[#FF6B00]">PENGAMANAN PRIVASI FILEPHOTOKU.STD</span>
+        <h2 class="font-editorial text-2xl font-bold text-espresso mt-1">Akses Khusus Pemilik Studio</h2>
+        <p class="text-xs text-espressoMuted mt-1">
+          Konsumen atau publik yang membuka link ini hanya akan diarahkan ke <strong>Website Portofolio & Booking Online</strong>. Masukkan PIN Admin Anda untuk masuk ke Dashboard Studio OS.
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <input id="admin-pin-input" type="password" placeholder="Masukkan PIN Admin (Default: 2026)" class="w-full px-4 py-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-center text-lg font-bold tracking-widest text-espresso focus:outline-none focus:ring-2 focus:ring-terracotta" />
+        <button onclick="verifyAdminPin()" class="w-full py-3.5 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-sm font-bold shadow transition">
+          Buka Sistem Admin OS →
+        </button>
+      </div>
+
+      <div class="pt-2 border-t border-[#F0E4D7] flex items-center justify-between text-xs">
+        <span class="text-espressoMuted">Bukan Owner? Masuk sebagai Publik:</span>
+        <button onclick="enterPublicPortfolioMode()" class="px-3 py-1.5 rounded-xl bg-beige hover:bg-[#e2ceb8] text-espresso font-bold transition">
+          Lihat Portofolio Klien
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== DESKTOP SIDEBAR ==================== -->
   <aside class="hidden lg:flex lg:flex-col lg:w-72 lg:shrink-0 bg-[#F4E8DC] border-r border-[#E6D5C3] min-h-screen sticky top-0 justify-between">
     <div>
@@ -199,6 +235,9 @@
       <button onclick="openGuideModal()" class="w-full py-2.5 px-3 rounded-xl bg-terracotta text-white text-xs font-semibold flex items-center justify-center gap-2 shadow hover:bg-terracottaDark transition">
         <i class="ph-bold ph-book-open-text text-base"></i> Panduan FILEPHOTOKU.STD
       </button>
+      <button onclick="lockAdminSession()" class="w-full py-2 px-3 rounded-xl border border-[#D8C2B0] text-espressoMuted hover:text-espresso hover:bg-beige text-xs font-medium flex items-center justify-center gap-1.5 transition">
+        <i class="ph ph-lock"></i> Kunci Sesi Admin (Lock)
+      </button>
       <button onclick="openResetModal()" class="w-full py-2 px-3 rounded-xl border border-[#D8C2B0] text-espressoMuted hover:text-espresso hover:bg-beige text-xs font-medium flex items-center justify-center gap-1.5 transition">
         <i class="ph ph-arrow-counter-clockwise"></i> Reset Data Awal
       </button>
@@ -209,10 +248,10 @@
   <div class="flex-1 flex flex-col min-w-0 pb-24 lg:pb-12">
 
     <!-- STICKY TOPBAR: BRANDING & GLOBAL SEARCH -->
-    <header class="sticky top-0 z-20 bg-cream/95 backdrop-blur-md border-b border-[#E6D5C3] px-4 sm:px-8 py-3.5">
-      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+    <header class="sticky top-0 z-20 bg-cream/95 backdrop-blur-md border-b border-[#E6D5C3] px-3 sm:px-8 py-3">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         <!-- Mobile Logo FILEPHOTOKU.STD -->
-        <div class="flex lg:hidden items-center gap-2.5 cursor-pointer" onclick="switchTab('dashboard')">
+        <div class="flex lg:hidden items-center justify-between w-full sm:w-auto gap-2">
           <div class="px-3 py-2 rounded-xl flex items-center gap-2 text-white shadow border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
             <div>
               <div class="text-xs tracking-wider leading-none">
@@ -231,33 +270,44 @@
               </g>
             </svg>
           </div>
+
+          <!-- Right Quick Action Buttons Mobile -->
+          <div class="flex items-center gap-1.5 lg:hidden">
+            <button onclick="switchTab('setup')" class="px-2.5 py-2 rounded-xl bg-beige hover:bg-[#e4d2be] text-espresso text-xs font-bold flex items-center gap-1 transition" title="Atur Data & PL">
+              <i class="ph-bold ph-sliders-horizontal text-terracotta"></i>
+              <span class="text-[11px]">PL</span>
+            </button>
+            <button onclick="openNewBookingModal()" class="px-3 py-2 rounded-xl bg-terracotta text-white text-xs font-semibold flex items-center gap-1 shadow">
+              <i class="ph-bold ph-plus-circle text-sm"></i>
+              <span>Booking</span>
+            </button>
+          </div>
         </div>
 
         <!-- Global Search Bar -->
-        <div class="relative flex-1 max-w-xl">
+        <div class="relative flex-1 max-w-xl w-full">
           <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-espressoMuted text-lg"></i>
           <input
             id="global-search"
             type="text"
             oninput="handleGlobalSearch(this.value)"
-            placeholder="Cari klien, paket (Silver 01, Engagement, Graduation), lokasi..."
-            class="w-full pl-10 pr-24 py-2.5 bg-white border border-[#DEC9B5] rounded-2xl text-xs sm:text-sm text-espresso placeholder-espressoMuted focus:outline-none focus:ring-2 focus:ring-terracotta shadow-sm"
+            placeholder="Cari klien, paket (Silver, Engagement)..."
+            class="w-full pl-10 pr-20 py-2 bg-white border border-[#DEC9B5] rounded-2xl text-xs text-espresso placeholder-espressoMuted focus:outline-none focus:ring-2 focus:ring-terracotta shadow-sm"
           />
           <button
             onclick="quickSearchDemo()"
-            class="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-xl bg-beige hover:bg-[#e3d1bd] text-[11px] font-semibold text-espresso transition"
-            title="Klik untuk contoh pencarian instan">
-            Coba Cari
+            class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded-xl bg-beige hover:bg-[#e3d1bd] text-[10px] font-semibold text-espresso transition">
+            Cari
           </button>
           <!-- Instant Search Dropdown Result -->
           <div id="global-search-results" class="hidden absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-warm-lg border border-[#DEC9B5] p-3 z-40 max-h-80 overflow-y-auto"></div>
         </div>
 
-        <!-- Right Quick Action Buttons -->
-        <div class="flex items-center gap-2">
-          <button onclick="switchTab('setup')" class="px-3 py-2 rounded-xl bg-beige hover:bg-[#e4d2be] text-espresso text-xs font-bold flex items-center gap-1.5 transition" title="Cocokkan Pricelist, Crew & Alat">
+        <!-- Right Quick Action Buttons Desktop -->
+        <div class="hidden lg:flex items-center gap-2">
+          <button onclick="switchTab('setup')" class="px-3 py-2 rounded-xl bg-beige hover:bg-[#e4d2be] text-espresso text-xs font-bold flex items-center gap-1.5 transition">
             <i class="ph-bold ph-sliders-horizontal text-terracotta"></i>
-            <span class="hidden sm:inline">Atur Data & PL</span>
+            <span>Atur Data & PL</span>
           </button>
           <button onclick="openNewBookingModal()" class="px-3.5 py-2.5 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow transition">
             <i class="ph-bold ph-plus-circle text-base"></i>
@@ -282,15 +332,18 @@
             </div>
             <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-white">Cocokkan Pricelist, Macam Jasa, Tim Crew & Alat Kerja</h2>
             <p class="text-xs sm:text-sm text-[#CDE0E8]">
-              Semua data yang Anda ubah di halaman ini <strong>otomatis tersimpan di perangkat Anda</strong> dan langsung memperbarui pilihan paket di <em>Booking Baru</em>, rincian <em>Invoice Otomatis</em>, daftar <em>Crew & Fee</em>, <em>Checklist Alat</em>, hingga <em>Website Portofolio</em>.
+              Semua data yang Anda ubah di halaman ini <strong>otomatis tersimpan di perangkat Anda</strong>. Gunakan tombol <strong>Panduan iPhone & VS Code</strong> atau <strong>Backup / Import Data</strong> di samping untuk menyamakan data antara Laptop dan iPhone Anda.
             </p>
           </div>
-          <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button onclick="exportStudioData()" class="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-1.5 transition">
-              <i class="ph-bold ph-download-simple"></i> Backup Data (.JSON)
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button onclick="openIphoneGuideModal()" class="px-3.5 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#e55f00] text-white text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="ph-bold ph-device-mobile-camera text-sm"></i> 📱 Cara Pakai di iPhone & VS Code
             </button>
-            <button onclick="switchTab('booking')" class="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#e55f00] text-white text-xs font-bold flex items-center gap-1.5 shadow transition">
-              <i class="ph-bold ph-check-circle"></i> Selesai & Lihat Booking
+            <button onclick="exportStudioData()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-1.5 transition" title="Salin & Unduh File Backup Data">
+              <i class="ph-bold ph-download-simple"></i> Backup (.JSON)
+            </button>
+            <button onclick="openImportModal()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-1.5 transition" title="Masukkan Data dari Laptop atau iPhone">
+              <i class="ph-bold ph-upload-simple"></i> Import Data
             </button>
           </div>
         </div>
@@ -832,20 +885,20 @@
           </div>
 
           <!-- Right Live Printable Invoice Card -->
-          <div id="invoice-print-area" class="lg:col-span-6 bg-white rounded-3xl border-2 border-[#DEC9B5] p-6 sm:p-8 shadow-warm-lg space-y-6">
-            <div class="flex items-start justify-between border-b border-[#EEDFD0] pb-5">
-              <div class="flex items-center gap-3.5">
+          <div id="invoice-print-area" class="lg:col-span-6 bg-white rounded-3xl border-2 border-[#DEC9B5] p-4 sm:p-8 shadow-warm-lg space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#EEDFD0] pb-4">
+              <div class="flex items-center gap-3">
                 <!-- Official Logo Badge on Invoice -->
-                <div class="px-4 py-3 rounded-2xl text-white flex items-center gap-3 shadow border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #11313F 55%, #071720 100%);">
+                <div class="px-3.5 py-2.5 rounded-2xl text-white flex items-center gap-2.5 shadow border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #11313F 55%, #071720 100%);">
                   <div>
-                    <div class="text-sm tracking-wider leading-none font-sans">
-                      <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-bold text-[#FF6B00] text-xs">.STD</span>
+                    <div class="text-xs sm:text-sm tracking-wider leading-none font-sans">
+                      <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-bold text-[#FF6B00] text-[10px]">.STD</span>
                     </div>
-                    <div class="text-[7px] tracking-[0.2em] uppercase text-white/80 mt-1 leading-tight">
+                    <div class="text-[6px] sm:text-[7px] tracking-[0.18em] uppercase text-white/80 mt-1 leading-tight">
                       CAPTURE YOUR STORY
                     </div>
                   </div>
-                  <svg viewBox="0 0 100 100" class="w-5 h-5 shrink-0">
+                  <svg viewBox="0 0 100 100" class="w-4 h-4 shrink-0">
                     <g transform="translate(50,50) rotate(-10)">
                       <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" />
                       <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(60)" />
@@ -857,31 +910,31 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="font-editorial text-xl font-bold text-espresso" id="inv-preview-brand">FILEPHOTOKU.STD</h3>
-                  <p class="text-xs text-espressoMuted" id="inv-preview-city">Banyuwangi • WA: 085708001457</p>
+                  <h3 class="font-editorial text-base sm:text-xl font-bold text-espresso" id="inv-preview-brand">FILEPHOTOKU.STD</h3>
+                  <p class="text-[11px] sm:text-xs text-espressoMuted" id="inv-preview-city">Banyuwangi • WA: 085708001457</p>
                 </div>
               </div>
-              <div class="text-right">
-                <span id="inv-status-badge" class="px-3 py-1 rounded-full bg-amberLight text-amberWarn text-xs font-bold">BELUM LUNAS</span>
-                <p class="font-mono text-xs text-espressoMuted mt-1.5" id="inv-number-display">INV/FP/2026/01</p>
+              <div class="flex sm:flex-col items-center sm:items-end justify-between">
+                <span id="inv-status-badge" class="px-2.5 py-0.5 rounded-full bg-amberLight text-amberWarn text-[11px] font-bold">BELUM LUNAS</span>
+                <p class="font-mono text-[11px] text-espressoMuted sm:mt-1.5" id="inv-number-display">INV/FP/2026/01</p>
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 text-xs">
-              <div class="p-3.5 rounded-2xl bg-cream">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div class="p-3 rounded-2xl bg-cream">
                 <p class="text-espressoMuted">Ditagihkan Kepada:</p>
-                <p class="font-bold text-sm text-espresso mt-0.5" id="inv-client-name">Diajeng & Firza</p>
-                <p class="text-espressoMuted mt-0.5" id="inv-client-date">Sabtu, 24 Okt 2026</p>
+                <p class="font-bold text-xs sm:text-sm text-espresso mt-0.5" id="inv-client-name">Diajeng & Firza</p>
+                <p class="text-espressoMuted mt-0.5 text-[11px]" id="inv-client-date">Sabtu, 24 Okt 2026</p>
               </div>
-              <div class="p-3.5 rounded-2xl bg-cream">
+              <div class="p-3 rounded-2xl bg-cream">
                 <p class="text-espressoMuted">Lokasi & Paket Utama:</p>
-                <p class="font-bold text-sm text-espresso mt-0.5" id="inv-client-venue">Banyuwangi</p>
-                <p class="text-terracotta font-semibold mt-0.5 truncate" id="inv-client-drive">WEDDING - MAGAZINE BOOK 02</p>
+                <p class="font-bold text-xs sm:text-sm text-espresso mt-0.5" id="inv-client-venue">Banyuwangi</p>
+                <p class="text-terracotta font-semibold mt-0.5 truncate text-[11px]" id="inv-client-drive">WEDDING - MAGAZINE BOOK 02</p>
               </div>
             </div>
 
             <!-- Line Items Table -->
-            <div class="space-y-2.5 border-b border-dashed border-[#DEC9B5] pb-4" id="inv-preview-lines"></div>
+            <div class="space-y-2 border-b border-dashed border-[#DEC9B5] pb-3" id="inv-preview-lines"></div>
 
             <!-- Totals -->
             <div class="space-y-2 text-sm">
@@ -1352,6 +1405,95 @@
     </div>
   </div>
 
+  <!-- ==================== MODAL: PANDUAN IPHONE & VS CODE ==================== -->
+  <div id="modal-iphone-guide" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-warm-lg border border-[#E6D5C3] space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#F0E4D7] pb-3">
+        <div>
+          <span class="text-xs font-bold uppercase text-[#FF6B00]">Workflow Laptop (VS Code) ⇄ iPhone</span>
+          <h3 class="font-editorial text-2xl font-bold text-espresso">Cara Menjalankan & Update di iPhone</h3>
+        </div>
+        <button onclick="closeIphoneGuideModal()" class="w-8 h-8 rounded-full bg-beige text-espresso flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs sm:text-sm text-espresso leading-relaxed">
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3]">
+          <p class="font-bold text-terracotta">1. Cara Paling Mudah Buka di iPhone (Tanpa Ribet Kabel)</p>
+          <p class="text-espressoMuted mt-1">
+            Karena iPhone (iOS) membatasi file <code>.html</code> jika dibuka langsung dari aplikasi <em>Files/File</em>, cara paling enak adalah meng-online-kan file ini secara gratis lewat <strong>Netlify Drop (app.netlify.com/drop)</strong> atau <strong>Vercel / GitHub Pages</strong> dari VS Code Anda:
+          </p>
+          <ul class="list-disc pl-5 mt-1.5 text-espressoMuted space-y-1">
+            <li>Simpan kode ini di VS Code dengan nama <strong><code>index.html</code></strong> di dalam satu folder khusus (misal folder <code>filephotoku-app</code>).</li>
+            <li>Buka <strong>app.netlify.com/drop</strong> di browser laptop, lalu <em>drag & drop</em> folder tersebut. Anda akan langsung mendapat link pribadi (misal: <code>filephotoku.netlify.app</code>).</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3]">
+          <p class="font-bold text-terracotta">2. Jadikan Aplikasi Asli di Layar Utama iPhone (Full Screen)</p>
+          <p class="text-espressoMuted mt-1">
+            Kode aplikasi ini sudah dilengkapi fitur <strong>iOS Web App</strong>. Setelah link terbuka di <strong>Safari iPhone</strong>:
+          </p>
+          <ul class="list-disc pl-5 mt-1.5 text-espressoMuted space-y-1">
+            <li>Ketuk tombol <strong>Share / Bagikan</strong> (ikon kotak dengan panah ke atas di bagian bawah Safari).</li>
+            <li>Geser ke bawah lalu pilih <strong>"Add to Home Screen" (Tambah ke Layar Utama)</strong>.</li>
+            <li>Sekarang ikon <strong>FILEPHOTOKU.STD</strong> muncul di layar iPhone Anda dan terbuka <em>full-screen</em> tanpa bar browser Safari!</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3]">
+          <p class="font-bold text-terracotta">3. Cara Live-Preview Langsung Saat Edit di VS Code</p>
+          <p class="text-espressoMuted mt-1">
+            Jika ingin melihat perubahan kode detik itu juga di iPhone saat sedang mengetik di VS Code:
+          </p>
+          <ul class="list-disc pl-5 mt-1.5 text-espressoMuted space-y-1">
+            <li>Install ekstensi <strong>Live Server</strong> di VS Code, lalu klik <em>Go Live</em> di pojok kanan bawah.</li>
+            <li>Pastikan Laptop dan iPhone terhubung ke WiFi/Hotspot yang sama, lalu buka alamat IP laptop Anda di Safari iPhone (contoh: <code>http://192.168.1.5:5500</code>).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeIphoneGuideModal()" class="px-6 py-2.5 rounded-xl bg-terracotta text-white text-xs font-bold">Mengerti & Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: IMPORT / RESTORE DATA JSON ==================== -->
+  <div id="modal-import-json" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-warm-lg border border-[#E6D5C3] space-y-4">
+      <div class="flex items-center justify-between border-b border-[#F0E4D7] pb-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase text-terracotta">Sinkronisasi Manual Antar Perangkat</span>
+          <h3 class="font-editorial text-xl font-bold text-espresso">Import / Restore Data Studio (.JSON)</h3>
+        </div>
+        <button onclick="closeImportModal()" class="w-8 h-8 rounded-full bg-beige text-espresso flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-espressoMuted leading-relaxed">
+        Pilih file <code>.json</code> hasil backup dari Laptop/iPhone Anda, atau tempelkan (<em>paste</em>) teks JSON yang sudah disalin ke kolom di bawah ini:
+      </p>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-espressoMuted mb-1">Pilih File Backup (.json)</label>
+        <input type="file" accept=".json,application/json" onchange="handleJsonFileUpload(event)" class="w-full text-xs text-espresso file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-beige file:text-espresso hover:file:bg-[#e2ceb8]" />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-espressoMuted mb-1">Atau Tempel (Paste) Teks JSON di Sini</label>
+        <textarea id="import-json-textarea" rows="5" placeholder='{"activeTab":"setup", "studioProfile": ...}' class="w-full p-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-[11px] text-espresso focus:outline-none focus:ring-2 focus:ring-terracotta"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeImportModal()" class="px-4 py-2.5 rounded-xl bg-beige text-espresso text-xs font-semibold">Batal</button>
+        <button onclick="confirmImportStudioData()" class="px-5 py-2.5 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shadow">Terapkan Data Sekarang</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== TOAST NOTIFICATION ==================== -->
   <div id="toast-box" class="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-50 hidden max-w-md bg-[#081A24] text-cream px-4 py-3.5 rounded-2xl shadow-warm-lg border border-[#234B5C] flex items-start gap-3">
     <i class="ph-fill ph-check-circle text-[#FF6B00] text-xl shrink-0 mt-0.5"></i>
@@ -1374,6 +1516,8 @@
       selectedInvoiceClientId: 'FP-JOB-01',
       selectedCrewJobId: 'FP-JOB-01',
       selectedPublicService: 'Wedding',
+      adminPin: '2026', // PIN rahasia owner
+      isUnlocked: false,
       studioProfile: {
         brandName: 'FILEPHOTOKU.STD',
         city: 'Banyuwangi',
@@ -1788,41 +1932,81 @@
       }
     }
 
-    function formatRupiah(num) {
-      const n = Number(num) || 0;
-      return 'Rp ' + n.toLocaleString('id-ID');
-    }
-
-    function copyTextToClipboard(text, title = 'Berhasil Disalin!') {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-        showToast(title, text.length > 110 ? text.slice(0, 110) + '...' : text);
-      } catch (err) {
-        showToast('Info', 'Teks siap disalin.');
-      }
-      document.body.removeChild(textarea);
-    }
-
-    let toastTimer = null;
-    function showToast(title, message = '') {
+    function showToast(title, message) {
       const box = document.getElementById('toast-box');
       document.getElementById('toast-title').textContent = title;
       document.getElementById('toast-message').textContent = message;
       box.classList.remove('hidden');
-      if (toastTimer) clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => {
-        box.classList.add('hidden');
-      }, 3600);
+      setTimeout(() => box.classList.add('hidden'), 3500);
+    }
+
+    function formatRupiah(num) {
+      return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    function copyTextToClipboard(text, successTitle) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(successTitle, text);
+        }).catch(() => fallbackCopy(text, successTitle));
+      } else {
+        fallbackCopy(text, successTitle);
+      }
+    }
+
+    function fallbackCopy(text, successTitle) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(successTitle, text);
+      } catch (e) {
+        showToast('Gagal Menyalin', 'Silakan salin secara manual.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    // ==================== SECURITY & PIN LOGIN ====================
+    function verifyAdminPin() {
+      const pin = document.getElementById('admin-pin-input').value.trim();
+      const correctPin = appState.adminPin || '2026';
+      if (pin === correctPin) {
+        appState.isUnlocked = true;
+        saveState();
+        document.getElementById('modal-admin-login').classList.add('hidden');
+        showToast('Akses Admin Dibuka!', 'Selamat bekerja di FILEPHOTOKU.STD Studio OS.');
+      } else {
+        showToast('PIN Salah', 'Silakan masukkan PIN rahasia pemilik studio yang benar.');
+      }
+    }
+
+    function enterPublicPortfolioMode() {
+      appState.isUnlocked = false;
+      saveState();
+      document.getElementById('modal-admin-login').classList.add('hidden');
+      switchTab('website');
+      showToast('Mode Publik Aktif', 'Klien hanya dapat melihat Website Portofolio & Booking Online.');
+    }
+
+    function lockAdminSession() {
+      appState.isUnlocked = false;
+      saveState();
+      document.getElementById('admin-pin-input').value = '';
+      document.getElementById('modal-admin-login').classList.remove('hidden');
+      showToast('Sesi Dikunci', 'Privasi studio Anda aman 100%.');
     }
 
     // ==================== NAVIGATION & SETUP SUBTABS ====================
     function switchTab(tabId) {
+      // Jika belum login admin dan mencoba buka menu operasional, arahkan ke website portofolio atau minta PIN
+      const adminOnlyTabs = ['setup', 'dashboard', 'booking', 'invoice', 'crew', 'gear', 'photosort'];
+      if (adminOnlyTabs.includes(tabId) && !appState.isUnlocked) {
+        document.getElementById('modal-admin-login').classList.remove('hidden');
+        return;
+      }
+
       appState.activeTab = tabId;
       saveState();
 
@@ -2183,7 +2367,70 @@
 
     function exportStudioData() {
       const dataStr = JSON.stringify(appState, null, 2);
-      copyTextToClipboard(dataStr, 'JSON Data Studio Disalin ke Clipboard!');
+      copyTextToClipboard(dataStr, 'Data Disalin & File Backup Diunduh!');
+      try {
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `FILEPHOTOKU_STD_BACKUP_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function openIphoneGuideModal() {
+      document.getElementById('modal-iphone-guide').classList.remove('hidden');
+    }
+
+    function closeIphoneGuideModal() {
+      document.getElementById('modal-iphone-guide').classList.add('hidden');
+    }
+
+    function openImportModal() {
+      document.getElementById('import-json-textarea').value = '';
+      document.getElementById('modal-import-json').classList.remove('hidden');
+    }
+
+    function closeImportModal() {
+      document.getElementById('modal-import-json').classList.add('hidden');
+    }
+
+    function handleJsonFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('import-json-textarea').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+
+    function confirmImportStudioData() {
+      const raw = document.getElementById('import-json-textarea').value.trim();
+      if (!raw) {
+        showToast('Data Kosong', 'Silakan pilih file .json atau tempel teks backup terlebih dahulu.');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.pricelist || !parsed.bookings) {
+          showToast('Format Tidak Sesuai', 'Data JSON tidak memiliki struktur FILEPHOTOKU.STD yang valid.');
+          return;
+        }
+        appState = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
+        saveState();
+        renderAll();
+        closeImportModal();
+        showToast('Data Berhasil Di-restore!', 'Seluruh Pricelist, Booking, Kru & Alat telah diperbarui.');
+      } catch (err) {
+        showToast('Gagal Membaca JSON', 'Pastikan teks JSON yang ditempel utuh dan tidak terpotong.');
+      }
     }
 
     // ==================== DASHBOARD & FINANCIAL CALCULATIONS ====================
@@ -3408,7 +3655,14 @@
 
     window.onload = function () {
       renderAll();
-      switchTab(appState.activeTab || 'setup');
+      if (appState.isUnlocked) {
+        document.getElementById('modal-admin-login').classList.add('hidden');
+        switchTab(appState.activeTab || 'setup');
+      } else {
+        // Jika belum login, tampilkan modal login, dan default buka tab website jika dipaksa
+        document.getElementById('modal-admin-login').classList.remove('hidden');
+        switchTab('website');
+      }
       switchSetupSubTab(appState.setupSubTab || 'pricelist');
       setBookingView(appState.bookingView || 'list');
     };
