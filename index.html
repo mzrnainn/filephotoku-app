@@ -1,0 +1,3417 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FILEPHOTOKU.STD — Capture Your Story</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Fraunces (Editorial Heading), Plus Jakarta Sans (UI), JetBrains Mono (Nominal & Kode File) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FAF3EB',
+            beige: '#EFE2D3',
+            card: '#FFFFFF',
+            espresso: '#2B1B12',
+            espressoMuted: '#7A6252',
+            terracotta: '#9E5231',
+            terracottaDark: '#7C3D21',
+            fpOrange: '#FF6B00',
+            sage: '#2E6F4E',
+            sageLight: '#E3F2EA',
+            amberWarn: '#D97706',
+            amberLight: '#FEF3C7',
+            danger: '#C93B2B',
+            dangerLight: '#FDE8E6',
+            driveBlue: '#1A73E8',
+            driveLight: '#E8F0FE'
+          },
+          fontFamily: {
+            editorial: ['Fraunces', 'serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          boxShadow: {
+            warm: '0 10px 30px -5px rgba(43, 27, 18, 0.07), 0 4px 12px -2px rgba(43, 27, 18, 0.04)',
+            'warm-lg': '0 20px 40px -10px rgba(43, 27, 18, 0.12)'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #FAF3EB;
+      color: #2B1B12;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF3EB;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D5C1AE;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9E5231;
+    }
+
+    .tab-section {
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+    .tab-section.active {
+      display: block;
+    }
+
+    .setup-subpanel {
+      display: none;
+      animation: fadeIn 0.18s ease-out;
+    }
+    .setup-subpanel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #invoice-print-area, #invoice-print-area * {
+        visibility: visible;
+      }
+      #invoice-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row selection:bg-terracotta selection:text-white">
+
+  <!-- ==================== DESKTOP SIDEBAR ==================== -->
+  <aside class="hidden lg:flex lg:flex-col lg:w-72 lg:shrink-0 bg-[#F4E8DC] border-r border-[#E6D5C3] min-h-screen sticky top-0 justify-between">
+    <div>
+      <!-- Brand Header FILEPHOTOKU.STD (Official Logo Lockup) -->
+      <div class="p-4 border-b border-[#E6D5C3]">
+        <div onclick="switchTab('dashboard')" class="cursor-pointer rounded-2xl p-4 shadow-md relative overflow-hidden border border-[#1B3B48]" style="background: linear-gradient(180deg, #06131A 0%, #0D2A36 38%, #1A3A3A 55%, #071720 100%);">
+          <!-- Efek garis horizontal motion blur khas logo FILEPHOTOKU.STD -->
+          <div class="absolute inset-x-0 top-3 h-[1px] bg-gradient-to-r from-amber-500/30 via-teal-300/20 to-transparent"></div>
+          <div class="absolute inset-x-0 bottom-3 h-[1px] bg-gradient-to-r from-amber-500/20 via-cyan-400/20 to-transparent"></div>
+          <div class="relative z-10">
+            <div class="text-white tracking-wider text-base sm:text-lg leading-none font-sans flex items-baseline">
+              <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-semibold text-[#FF6B00] text-xs ml-0.5">.STD</span>
+            </div>
+            <div class="mt-2 flex items-center gap-3">
+              <div class="text-[8px] tracking-[0.22em] uppercase text-white/85 leading-tight font-medium">
+                <div>CAPTURE YOUR</div>
+                <div>STORY</div>
+              </div>
+              <!-- Asterisk Oranye Resmi FILEPHOTOKU.STD -->
+              <svg viewBox="0 0 100 100" class="w-5 h-5 shrink-0">
+                <g transform="translate(50,50) rotate(-10)">
+                  <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" />
+                  <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(60)" />
+                  <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(120)" />
+                  <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(180)" />
+                  <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(240)" />
+                  <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(300)" />
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between px-1 mt-2">
+          <span class="text-[11px] font-bold text-espresso" id="sidebar-brand-title">FILEPHOTOKU.STD</span>
+          <span class="text-[10px] font-semibold text-espressoMuted" id="sidebar-brand-city">Banyuwangi</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="px-3.5 pt-3 pb-2 overflow-y-auto max-h-[calc(100vh-240px)]">
+        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-terracotta mb-1.5">Kustomisasi Data Studio</p>
+        <div class="mb-3">
+          <button onclick="switchTab('setup')" data-tab="setup" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-terracotta text-white shadow-sm transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-sliders-horizontal text-lg"></i> ⚙️ Atur Data Studio</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">Master</span>
+          </button>
+        </div>
+
+        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-espressoMuted mb-1.5">Operasional FILEPHOTOKU.STD</p>
+        <nav class="space-y-1" id="desktop-nav">
+          <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-squares-four text-lg"></i> 1. Dashboard & Kas</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-dangerLight text-danger font-bold" id="nav-overdue-pill">2 Lewat</span>
+          </button>
+          <button onclick="switchTab('booking')" data-tab="booking" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-calendar-check text-lg"></i> 2. Booking & Drive</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-beige text-espresso font-bold" id="nav-booking-badge">4 Job</span>
+          </button>
+          <button onclick="switchTab('invoice')" data-tab="invoice" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-receipt text-lg"></i> 3. Invoice Otomatis</span>
+          </button>
+          <button onclick="switchTab('crew')" data-tab="crew" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-users-three text-lg"></i> 4. Kru, Fee & Shareloc</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-danger animate-pulse" id="crew-warning-dot" title="Ada posisi kru kosong!"></span>
+          </button>
+          <button onclick="switchTab('gear')" data-tab="gear" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-memory text-lg"></i> 5. Gear & Memory Card</span>
+          </button>
+          <button onclick="switchTab('photosort')" data-tab="photosort" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-images text-lg"></i> 6. Sortir Foto (FP_xxx)</span>
+          </button>
+          <button onclick="switchTab('website')" data-tab="website" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition">
+            <span class="flex items-center gap-2.5"><i class="ph-fill ph-globe-hemisphere-west text-lg"></i> 7. Web & Mitra Vendor</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Bottom Sidebar Help & Reset -->
+    <div class="p-4 border-t border-[#E6D5C3] space-y-2 bg-[#F4E8DC]">
+      <button onclick="openGuideModal()" class="w-full py-2.5 px-3 rounded-xl bg-terracotta text-white text-xs font-semibold flex items-center justify-center gap-2 shadow hover:bg-terracottaDark transition">
+        <i class="ph-bold ph-book-open-text text-base"></i> Panduan FILEPHOTOKU.STD
+      </button>
+      <button onclick="openResetModal()" class="w-full py-2 px-3 rounded-xl border border-[#D8C2B0] text-espressoMuted hover:text-espresso hover:bg-beige text-xs font-medium flex items-center justify-center gap-1.5 transition">
+        <i class="ph ph-arrow-counter-clockwise"></i> Reset Data Awal
+      </button>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+  <div class="flex-1 flex flex-col min-w-0 pb-24 lg:pb-12">
+
+    <!-- STICKY TOPBAR: BRANDING & GLOBAL SEARCH -->
+    <header class="sticky top-0 z-20 bg-cream/95 backdrop-blur-md border-b border-[#E6D5C3] px-4 sm:px-8 py-3.5">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        <!-- Mobile Logo FILEPHOTOKU.STD -->
+        <div class="flex lg:hidden items-center gap-2.5 cursor-pointer" onclick="switchTab('dashboard')">
+          <div class="px-3 py-2 rounded-xl flex items-center gap-2 text-white shadow border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
+            <div>
+              <div class="text-xs tracking-wider leading-none">
+                <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-bold text-[#FF6B00] text-[10px]">.STD</span>
+              </div>
+              <div class="text-[7px] tracking-[0.18em] text-white/80 uppercase mt-0.5">CAPTURE YOUR STORY</div>
+            </div>
+            <svg viewBox="0 0 100 100" class="w-4 h-4 shrink-0">
+              <g transform="translate(50,50) rotate(-10)">
+                <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" />
+                <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(60)" />
+                <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(120)" />
+                <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(180)" />
+                <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(240)" />
+                <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(300)" />
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Global Search Bar -->
+        <div class="relative flex-1 max-w-xl">
+          <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-espressoMuted text-lg"></i>
+          <input
+            id="global-search"
+            type="text"
+            oninput="handleGlobalSearch(this.value)"
+            placeholder="Cari klien, paket (Silver 01, Engagement, Graduation), lokasi..."
+            class="w-full pl-10 pr-24 py-2.5 bg-white border border-[#DEC9B5] rounded-2xl text-xs sm:text-sm text-espresso placeholder-espressoMuted focus:outline-none focus:ring-2 focus:ring-terracotta shadow-sm"
+          />
+          <button
+            onclick="quickSearchDemo()"
+            class="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-xl bg-beige hover:bg-[#e3d1bd] text-[11px] font-semibold text-espresso transition"
+            title="Klik untuk contoh pencarian instan">
+            Coba Cari
+          </button>
+          <!-- Instant Search Dropdown Result -->
+          <div id="global-search-results" class="hidden absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-warm-lg border border-[#DEC9B5] p-3 z-40 max-h-80 overflow-y-auto"></div>
+        </div>
+
+        <!-- Right Quick Action Buttons -->
+        <div class="flex items-center gap-2">
+          <button onclick="switchTab('setup')" class="px-3 py-2 rounded-xl bg-beige hover:bg-[#e4d2be] text-espresso text-xs font-bold flex items-center gap-1.5 transition" title="Cocokkan Pricelist, Crew & Alat">
+            <i class="ph-bold ph-sliders-horizontal text-terracotta"></i>
+            <span class="hidden sm:inline">Atur Data & PL</span>
+          </button>
+          <button onclick="openNewBookingModal()" class="px-3.5 py-2.5 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow transition">
+            <i class="ph-bold ph-plus-circle text-base"></i>
+            <span>Booking Baru</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-8 pt-6 space-y-8">
+
+      <!-- =================================================================== -->
+      <!-- MENU 0 (UTAMA): ⚙️ ATUR DATA STUDIO (PRICELIST, JASA, CREW & ALAT)  -->
+      <!-- =================================================================== -->
+      <section id="tab-setup" class="tab-section space-y-6">
+        <!-- Header Banner Setup -->
+        <div class="rounded-3xl bg-gradient-to-r from-[#071720] via-[#102E3B] to-[#1A3E4C] text-cream p-6 sm:p-8 shadow-warm-lg flex flex-col lg:flex-row lg:items-center justify-between gap-6 border border-[#234B5C]">
+          <div class="space-y-2 max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-beige text-xs font-bold">
+              <i class="ph-fill ph-sliders-horizontal text-[#FF6B00]"></i> Pusat Kustomisasi Master Data FILEPHOTOKU.STD
+            </div>
+            <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-white">Cocokkan Pricelist, Macam Jasa, Tim Crew & Alat Kerja</h2>
+            <p class="text-xs sm:text-sm text-[#CDE0E8]">
+              Semua data yang Anda ubah di halaman ini <strong>otomatis tersimpan di perangkat Anda</strong> dan langsung memperbarui pilihan paket di <em>Booking Baru</em>, rincian <em>Invoice Otomatis</em>, daftar <em>Crew & Fee</em>, <em>Checklist Alat</em>, hingga <em>Website Portofolio</em>.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button onclick="exportStudioData()" class="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="ph-bold ph-download-simple"></i> Backup Data (.JSON)
+            </button>
+            <button onclick="switchTab('booking')" class="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#e55f00] text-white text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="ph-bold ph-check-circle"></i> Selesai & Lihat Booking
+            </button>
+          </div>
+        </div>
+
+        <!-- Sub-Tab Navigation Setup (4 Kategori Data) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-[#EFE2D3] p-2 rounded-2xl border border-[#DFCBB8]">
+          <button onclick="switchSetupSubTab('pricelist')" id="subtab-btn-pricelist" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 bg-espresso text-white shadow transition">
+            <i class="ph-fill ph-tag text-base"></i> 1. Jasa & Pricelist
+          </button>
+          <button onclick="switchSetupSubTab('crew')" id="subtab-btn-crew" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 text-espresso hover:bg-white/60 transition">
+            <i class="ph-fill ph-users-three text-base"></i> 2. Daftar Crew & Fee
+          </button>
+          <button onclick="switchSetupSubTab('gear')" id="subtab-btn-gear" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 text-espresso hover:bg-white/60 transition">
+            <i class="ph-fill ph-camera text-base"></i> 3. Alat & Memory Card
+          </button>
+          <button onclick="switchSetupSubTab('profile')" id="subtab-btn-profile" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 text-espresso hover:bg-white/60 transition">
+            <i class="ph-fill ph-bank text-base"></i> 4. Profil & Rekening
+          </button>
+        </div>
+
+        <!-- SUB-PANEL 1: MACAM-MACAM JASA & PRICELIST -->
+        <div id="setup-panel-pricelist" class="setup-subpanel active space-y-6">
+          <!-- Bagian A: Macam-Macam Jasa / Kategori Layanan -->
+          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#F2E6D8] pb-4">
+              <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">A. Macam-Macam Jasa FILEPHOTOKU.STD</span>
+                <h3 class="font-editorial text-xl font-bold text-espresso">Kategori Layanan Fotografi & Video</h3>
+                <p class="text-xs text-espressoMuted">Kategori ini muncul sebagai filter kalender, label job klien, dan pilihan layanan di Website Booking Online (termasuk Maternity yang bisa Anda isi PL-nya kapan saja).</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <input id="new-service-cat-input" type="text" placeholder="Misal: Prewedding / Event..." class="px-3.5 py-2 rounded-xl border border-[#DEC9B5] text-xs bg-cream focus:outline-none focus:ring-2 focus:ring-terracotta" />
+                <button onclick="addServiceCategory()" class="px-4 py-2 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shrink-0 transition">
+                  + Tambah Jasa
+                </button>
+              </div>
+            </div>
+            <div id="setup-service-categories-list" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <!-- Bagian B: Tabel Master Pricelist & Paket -->
+          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F2E6D8] pb-4">
+              <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">B. Daftar Paket & Pricelist Resmi FILEPHOTOKU.STD</span>
+                <h3 class="font-editorial text-xl font-bold text-espresso">Pricelist Wedding, Engagement, Graduation, Maternity & Add-On</h3>
+                <p class="text-xs text-espressoMuted">Ubah langsung nama paket, harga (Rp), atau deskripsi di bawah ini. Paket <strong>Maternity</strong> sudah disiapkan drafnya agar tinggal Anda sesuaikan angkanya.</p>
+              </div>
+              <span class="px-3 py-1.5 rounded-xl bg-sageLight text-sage text-xs font-bold shrink-0" id="pricelist-count-badge">20 Paket Aktif</span>
+            </div>
+
+            <!-- Form Tambah Paket / Item Pricelist Baru -->
+            <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3] space-y-3">
+              <p class="text-xs font-bold text-espresso flex items-center gap-1.5">
+                <i class="ph-fill ph-plus-circle text-terracotta"></i> Tambah Paket / Item Pricelist Baru (Misal Paket Maternity Baru)
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                <div class="sm:col-span-3">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Kategori Jasa</label>
+                  <select id="pl-new-category" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold text-espresso"></select>
+                </div>
+                <div class="sm:col-span-3">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Nama Paket / Layanan</label>
+                  <input id="pl-new-name" type="text" placeholder="Contoh: MATERNITY - GOLD" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs text-espresso" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Harga (Rp)</label>
+                  <input id="pl-new-price" type="number" step="25000" placeholder="450000" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs text-espresso" />
+                </div>
+                <div class="sm:col-span-3">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Rincian / Output Paket</label>
+                  <input id="pl-new-desc" type="text" placeholder="60 Menit, 20 Edit, All File GDrive..." class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs text-espresso" />
+                </div>
+                <div class="sm:col-span-1 flex items-end">
+                  <button onclick="addPricelistItem()" class="w-full py-2 px-3 rounded-xl bg-espresso hover:bg-terracotta text-white text-xs font-bold transition">
+                    Simpan
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daftar Pricelist yang Bisa Diedit Langsung -->
+            <div id="setup-pricelist-container" class="space-y-2.5"></div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 2: DAFTAR CREW & STANDAR FEE -->
+        <div id="setup-panel-crew" class="setup-subpanel space-y-6">
+          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F2E6D8] pb-4">
+              <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">Database Tim Internal & Freelancer</span>
+                <h3 class="font-editorial text-xl font-bold text-espresso">Daftar Crew & Standar Fee FILEPHOTOKU.STD</h3>
+                <p class="text-xs text-espressoMuted">Daftar kru ini akan muncul otomatis di dropdown penugasan menu <strong>4. Kru, Fee & Shareloc</strong> beserta nominal fee standarnya.</p>
+              </div>
+              <span class="px-3 py-1.5 rounded-xl bg-beige text-espresso text-xs font-bold" id="crew-master-count-badge">5 Kru Terdaftar</span>
+            </div>
+
+            <!-- Form Tambah Kru Baru -->
+            <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3] space-y-3">
+              <p class="text-xs font-bold text-espresso flex items-center gap-1.5">
+                <i class="ph-fill ph-user-plus text-terracotta"></i> Tambah Anggota Crew / Freelancer Baru
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                <div class="sm:col-span-3">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Nama Panggilan / Lengkap</label>
+                  <input id="crew-new-name" type="text" placeholder="Contoh: Raka (FG 2)" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs text-espresso" />
+                </div>
+                <div class="sm:col-span-3">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Posisi / Spesialisasi</label>
+                  <select id="crew-new-role" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold text-espresso">
+                    <option value="Fotografer Utama">Fotografer Utama</option>
+                    <option value="Second Shooter">Second Shooter</option>
+                    <option value="Videografer">Videografer</option>
+                    <option value="Asisten Lighting & File">Asisten Lighting & File</option>
+                    <option value="Pilot Drone">Pilot Drone</option>
+                    <option value="Editor Foto / Video">Editor Foto / Video</option>
+                  </select>
+                </div>
+                <div class="sm:col-span-3">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">Standar Fee per Job (Rp)</label>
+                  <input id="crew-new-fee" type="number" step="25000" placeholder="300000" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs text-espresso" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="text-[10px] font-bold uppercase text-espressoMuted">No. WhatsApp</label>
+                  <input id="crew-new-wa" type="text" placeholder="0812xxxx" class="w-full mt-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs text-espresso" />
+                </div>
+                <div class="sm:col-span-1 flex items-end">
+                  <button onclick="addCrewMasterItem()" class="w-full py-2 px-3 rounded-xl bg-espresso hover:bg-terracotta text-white text-xs font-bold transition">
+                    + Kru
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daftar Kru Master -->
+            <div id="setup-crew-master-list" class="space-y-2.5"></div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 3: ALAT, KAMERA, LENSA & MEMORY CARD -->
+        <div id="setup-panel-gear" class="setup-subpanel space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Kiri: Kamera, Lensa & Gear -->
+            <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-4">
+              <div class="border-b border-[#F2E6D8] pb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">Inventaris Kamera & Lighting</span>
+                <h3 class="font-editorial text-xl font-bold text-espresso">Daftar Alat & Gear FILEPHOTOKU.STD</h3>
+                <p class="text-xs text-espressoMuted">Sesuaikan dengan kamera, lensa, flash, tripod, dan gimbal yang Anda miliki.</p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-cream p-3.5 rounded-2xl border border-[#E6D5C3]">
+                <input id="setup-gear-name" type="text" placeholder="Nama Alat (mis: Sony A7IV Body #1)" class="sm:col-span-5 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
+                <input id="setup-gear-holder" type="text" placeholder="Pemegang / Tas (mis: Tas Utama)" class="sm:col-span-4 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
+                <button onclick="addGearFromSetup()" class="sm:col-span-3 py-2 px-3 rounded-xl bg-terracotta text-white text-xs font-bold hover:bg-terracottaDark transition">
+                  + Tambah Alat
+                </button>
+              </div>
+
+              <div id="setup-gear-list" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
+            </div>
+
+            <!-- Kanan: Memory Card -->
+            <div class="lg:col-span-5 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-4">
+              <div class="border-b border-[#F2E6D8] pb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-driveBlue">Kartu Memori Kamera</span>
+                <h3 class="font-editorial text-xl font-bold text-espresso">Daftar Memory Card</h3>
+                <p class="text-xs text-espressoMuted">Daftarkan kode SD Card / CFexpress Anda agar tidak salah format sebelum di-backup.</p>
+              </div>
+
+              <div class="space-y-2 bg-cream p-3.5 rounded-2xl border border-[#E6D5C3]">
+                <input id="setup-mc-code" type="text" placeholder="Kode Card (mis: Card #A1 - SanDisk 128GB)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
+                <input id="setup-mc-job" type="text" placeholder="Dipakai Job Terakhir / Keterangan" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
+                <button onclick="addMemoryCardFromSetup()" class="w-full py-2 px-3 rounded-xl bg-driveBlue text-white text-xs font-bold hover:opacity-95 transition">
+                  + Daftarkan Memory Card
+                </button>
+              </div>
+
+              <div id="setup-mc-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 4: PROFIL STUDIO & REKENING INVOICE -->
+        <div id="setup-panel-profile" class="setup-subpanel space-y-6">
+          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 sm:p-8 shadow-warm max-w-3xl space-y-5">
+            <div class="border-b border-[#F2E6D8] pb-4">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">Identitas & Pembayaran Resmi</span>
+              <h3 class="font-editorial text-xl font-bold text-espresso">Profil Studio & Rekening Bank FILEPHOTOKU.STD</h3>
+              <p class="text-xs text-espressoMuted">Data ini otomatis tampil di kop Invoice PDF, pesan tagihan WhatsApp, dan halaman Website Portofolio.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-bold text-espressoMuted uppercase">Nama Studio / Brand</label>
+                <input id="prof-brand-name" type="text" oninput="saveStudioProfile()" class="w-full mt-1 px-4 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm font-bold text-espresso" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-espressoMuted uppercase">Kota / Domisili Operasional</label>
+                <input id="prof-city" type="text" oninput="saveStudioProfile()" class="w-full mt-1 px-4 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm text-espresso" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-espressoMuted uppercase">Nomor WhatsApp Admin</label>
+                <input id="prof-wa" type="text" oninput="saveStudioProfile()" class="w-full mt-1 px-4 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-sm text-espresso" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-espressoMuted uppercase">Rekening Tujuan di Invoice & WA</label>
+                <input id="prof-bank" type="text" oninput="saveStudioProfile()" class="w-full mt-1 px-4 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-sm font-bold text-espresso" />
+              </div>
+              <div class="sm:col-span-2">
+                <label class="text-xs font-bold text-espressoMuted uppercase">Tagline / Deskripsi Singkat di Website Booking</label>
+                <input id="prof-tagline" type="text" oninput="saveStudioProfile()" class="w-full mt-1 px-4 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm text-espresso" />
+              </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-between">
+              <span class="text-xs text-sage font-semibold flex items-center gap-1.5">
+                <i class="ph-fill ph-check-circle"></i> Tersimpan otomatis saat Anda mengetik
+              </span>
+              <button onclick="showToast('Profil & Rekening FILEPHOTOKU.STD berhasil diperbarui!')" class="px-5 py-2.5 rounded-xl bg-terracotta text-white text-xs font-bold shadow hover:bg-terracottaDark transition">
+                Simpan Profil Studio
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 1: DASHBOARD, KAS & TRACKER FILE GOOGLE DRIVE                  -->
+      <!-- =================================================================== -->
+      <section id="tab-dashboard" class="tab-section space-y-6">
+
+        <!-- Top Hero Banner -->
+        <div class="rounded-3xl bg-gradient-to-br from-[#071720] via-[#102E3B] to-[#1D4250] text-cream p-6 sm:p-8 shadow-warm-lg relative overflow-hidden border border-[#234B5C]">
+          <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="space-y-2 max-w-xl">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-beige text-xs font-medium">
+                <span class="w-2 h-2 rounded-full bg-[#FF6B00] animate-ping"></span>
+                <span>Sistem Operasional <strong id="dash-brand-badge">FILEPHOTOKU.STD</strong> • Banyuwangi</span>
+              </div>
+              <h2 class="font-editorial text-2xl sm:text-4xl font-bold tracking-tight text-white">
+                Selamat bekerja, Tim FILEPHOTOKU.STD! 📸
+              </h2>
+              <p class="text-[#CDE0E8] text-xs sm:text-sm leading-relaxed">
+                Seluruh Pricelist Resmi (<strong>Wedding Silver & Magazine Book, Engagement 01–03, Graduation Basic–Premium, dan Draf Maternity</strong>) telah aktif. Pantau DP minimal 30%, sisa pelunasan, serta progres upload file Google Drive (1–3 hari preview, 3–7 hari edit).
+              </p>
+            </div>
+
+            <!-- Highlight Piutang Card -->
+            <div class="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-5 min-w-[280px] sm:min-w-[330px]">
+              <div class="flex items-center justify-between text-xs text-[#CDE0E8] mb-1">
+                <span>Sisa Pelunasan Klien Aktif</span>
+                <span class="px-2 py-0.5 rounded-full bg-danger text-white font-semibold text-[10px]" id="dash-overdue-count">2 Perlu Ditagih</span>
+              </div>
+              <div class="font-mono text-2xl sm:text-3xl font-bold text-white tracking-tight" id="dash-total-unpaid">
+                Rp 2.800.000
+              </div>
+              <p class="text-[11px] text-[#CDE0E8] mt-1">Pelunasan maksimal setelah acara/sesi selesai</p>
+              <div class="mt-4 flex items-center gap-2">
+                <button onclick="remindAllOverdueClients()" class="flex-1 py-2.5 px-3 rounded-xl bg-[#FF6B00] hover:bg-[#e55f00] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow transition">
+                  <i class="ph-bold ph-whatsapp-logo text-sm"></i> Ingatkan Pelunasan
+                </button>
+                <button onclick="switchTab('invoice')" class="py-2.5 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition">
+                  Buka Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Financial & File Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-2xl p-5 border border-[#E6D5C3] shadow-warm">
+            <div class="flex items-center justify-between text-xs text-espressoMuted mb-2">
+              <span class="font-semibold">Belum Terbayar (Sisa)</span>
+              <span class="w-8 h-8 rounded-xl bg-amberLight text-amberWarn flex items-center justify-center"><i class="ph-fill ph-clock-countdown text-lg"></i></span>
+            </div>
+            <div class="font-mono text-xl font-bold text-espresso" id="stat-unpaid">Rp 2.800.000</div>
+            <p class="text-[11px] text-espressoMuted mt-1" id="stat-unpaid-sub">Dari 4 proyek aktif</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-5 border border-[#E6D5C3] shadow-warm">
+            <div class="flex items-center justify-between text-xs text-espressoMuted mb-2">
+              <span class="font-semibold">Total DP Masuk (Min 30%)</span>
+              <span class="w-8 h-8 rounded-xl bg-beige text-terracotta flex items-center justify-center"><i class="ph-fill ph-hand-coins text-lg"></i></span>
+            </div>
+            <div class="font-mono text-xl font-bold text-espresso" id="stat-dp">Rp 2.000.000</div>
+            <p class="text-[11px] text-espressoMuted mt-1">Mengunci slot jadwal</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-5 border border-[#E6D5C3] shadow-warm">
+            <div class="flex items-center justify-between text-xs text-espressoMuted mb-2">
+              <span class="font-semibold">Total Omzet Paket</span>
+              <span class="w-8 h-8 rounded-xl bg-driveLight text-driveBlue flex items-center justify-center"><i class="ph-fill ph-chart-line-up text-lg"></i></span>
+            </div>
+            <div class="font-mono text-xl font-bold text-driveBlue" id="stat-gross">Rp 4.800.000</div>
+            <p class="text-[11px] text-espressoMuted mt-1">Nilai kontrak berjalan</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-5 border border-[#E6D5C3] shadow-warm">
+            <div class="flex items-center justify-between text-xs text-espressoMuted mb-2">
+              <span class="font-semibold">Estimasi Profit Studio</span>
+              <span class="w-8 h-8 rounded-xl bg-sageLight text-sage flex items-center justify-center"><i class="ph-fill ph-trend-up text-lg"></i></span>
+            </div>
+            <div class="font-mono text-xl font-bold text-sage" id="stat-profit">Rp 3.950.000</div>
+            <p class="text-[11px] text-sage font-semibold mt-1" id="stat-margin">Dikurangi total fee kru</p>
+          </div>
+        </div>
+
+        <!-- Tracker Status File & Google Drive -->
+        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#F2E6D8] pb-4">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-driveBlue">SOP Pengiriman File FILEPHOTOKU.STD</span>
+              <h3 class="font-editorial text-xl font-bold text-espresso">Pelacak Progres File Foto, Preview (1–3 Hari) & Edit (3–7 Hari)</h3>
+            </div>
+            <span class="text-xs text-espressoMuted">Klik tahapan pada tiap klien untuk mengubah status file secara langsung</span>
+          </div>
+          <div id="dashboard-file-tracker" class="space-y-3"></div>
+        </div>
+
+        <!-- Grid: Kalender Booking & Pain-Point Comparison -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Mini Calendar -->
+          <div class="lg:col-span-5 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">Kalender Jadwal</span>
+                  <h3 class="font-editorial text-xl font-bold text-espresso">Oktober 2026</h3>
+                </div>
+                <span class="px-3 py-1 rounded-full bg-terracotta text-white font-mono text-xs font-bold" id="october-booked-badge">
+                  20 / 20 Booked
+                </span>
+              </div>
+              <div class="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-espressoMuted mb-2">
+                <div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div><div>Min</div>
+              </div>
+              <div id="mini-october-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs"></div>
+            </div>
+            <div class="mt-5 pt-4 border-t border-[#F0E4D7] flex items-center justify-between text-xs text-espressoMuted">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-terracotta inline-block"></span> Tanggal Terisi Job</span>
+              <button onclick="switchTab('booking')" class="text-terracotta font-semibold hover:underline flex items-center gap-1">
+                Detail Jadwal <i class="ph-bold ph-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: Solusi Sistem Kerja -->
+          <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta">Standar Kerja FILEPHOTOKU.STD</span>
+                  <h3 class="font-editorial text-xl font-bold text-espresso">6 Otomatisasi Kerja Studio</h3>
+                </div>
+                <span class="px-3 py-1 rounded-full bg-sageLight text-sage text-xs font-bold flex items-center gap-1">
+                  <i class="ph-fill ph-check-circle"></i> Sesuai Pricing Guide Resmi
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div onclick="switchTab('setup')" class="cursor-pointer p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] hover:border-terracotta transition flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shrink-0 mt-0.5"><i class="ph-bold ph-sliders-horizontal"></i></div>
+                  <div>
+                    <p class="font-bold text-espresso">Pricelist Resmi + Maternity</p>
+                    <p class="text-espressoMuted mt-0.5">Wedding Silver/Magazine, Engagement, Graduation & Maternity siap pakai.</p>
+                  </div>
+                </div>
+
+                <div onclick="switchTab('invoice')" class="cursor-pointer p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] hover:border-terracotta transition flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shrink-0 mt-0.5"><i class="ph-bold ph-receipt"></i></div>
+                  <div>
+                    <p class="font-bold text-espresso">Invoice + Ketentuan DP 30%</p>
+                    <p class="text-espressoMuted mt-0.5">Otomatis hitung DP 30% & syarat ketentuan resmi FILEPHOTOKU.STD.</p>
+                  </div>
+                </div>
+
+                <div onclick="switchTab('photosort')" class="cursor-pointer p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] hover:border-terracotta transition flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shrink-0 mt-0.5"><i class="ph-bold ph-images"></i></div>
+                  <div>
+                    <p class="font-bold text-espresso">Sortir Kode File (FP_xxx)</p>
+                    <p class="text-espressoMuted mt-0.5">Klien pilih foto untuk cetak 4R, 10RS, 14RS, atau Magazine Book.</p>
+                  </div>
+                </div>
+
+                <div onclick="switchTab('crew')" class="cursor-pointer p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] hover:border-terracotta transition flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shrink-0 mt-0.5"><i class="ph-bold ph-map-pin-line"></i></div>
+                  <div>
+                    <p class="font-bold text-espresso">Briefing & Shareloc 1-Klik</p>
+                    <p class="text-espressoMuted mt-0.5">Kirim lokasi acara & jam kumpul ke Fotografer, Videografer & Asisten.</p>
+                  </div>
+                </div>
+
+                <div onclick="switchTab('gear')" class="cursor-pointer p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] hover:border-terracotta transition flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shrink-0 mt-0.5"><i class="ph-bold ph-memory"></i></div>
+                  <div>
+                    <p class="font-bold text-espresso">Kontrol Memory Card & Flashdisk</p>
+                    <p class="text-espressoMuted mt-0.5">Cegah kartu memori terformat sebelum file masuk ke GDrive/Flashdisk.</p>
+                  </div>
+                </div>
+
+                <div onclick="switchTab('website')" class="cursor-pointer p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] hover:border-terracotta transition flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shrink-0 mt-0.5"><i class="ph-bold ph-globe"></i></div>
+                  <div>
+                    <p class="font-bold text-espresso">Form Booking Online Banyuwangi</p>
+                    <p class="text-espressoMuted mt-0.5">Klien bisa simulasi pilih paket & booking langsung dari HP.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 2: KELOLA BOOKING, LINK GOOGLE DRIVE & ALUR KERJA 4 TAHAP      -->
+      <!-- =================================================================== -->
+      <section id="tab-booking" class="tab-section space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-terracotta">Manajemen Jadwal & Link Google Drive</span>
+            <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-espresso">Daftar Booking Klien FILEPHOTOKU.STD</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-xl bg-beige p-1 border border-[#DEC9B5]">
+              <button onclick="setBookingView('list')" id="view-btn-list" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-espresso shadow-sm transition">
+                <i class="ph-bold ph-list-bullets mr-1"></i> Kartu Alur & Drive
+              </button>
+              <button onclick="setBookingView('calendar')" id="view-btn-calendar" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-espressoMuted hover:text-espresso transition">
+                <i class="ph-bold ph-calendar-blank mr-1"></i> KalenderPenuh
+              </button>
+            </div>
+            <button onclick="openNewBookingModal()" class="px-4 py-2 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-semibold flex items-center gap-1.5 shadow transition">
+              <i class="ph-bold ph-plus"></i> Tambah Job Klien
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Filter Chips (Dinamis mengikuti Macam-Macam Jasa) -->
+        <div id="booking-category-chips" class="flex flex-wrap items-center gap-2"></div>
+
+        <!-- List View Container -->
+        <div id="booking-list-container" class="grid grid-cols-1 gap-4"></div>
+
+        <!-- Full Calendar View Container -->
+        <div id="booking-calendar-container" class="hidden bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-editorial text-xl font-bold text-espresso">Kalender Produksi FILEPHOTOKU.STD — Oktober 2026</h3>
+              <p class="text-xs text-espressoMuted">Klik tanggal berwarna coklat untuk melihat atau menambah detail klien</p>
+            </div>
+            <span class="px-3 py-1 rounded-xl bg-beige text-espresso font-mono text-xs font-bold">Slot Maksimal: 2 Job / Hari</span>
+          </div>
+          <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-espressoMuted mb-2">
+            <div>Senin</div><div>Selasa</div><div>Rabu</div><div>Kamis</div><div>Jumat</div><div>Sabtu</div><div>Minggu</div>
+          </div>
+          <div id="full-calendar-grid" class="grid grid-cols-7 gap-2"></div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 3: INVOICE OTOMATIS & KALKULATOR PEMBAYARAN                    -->
+      <!-- =================================================================== -->
+      <section id="tab-invoice" class="tab-section space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-terracotta">Bebas Hitung Manual</span>
+            <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-espresso">Generator Invoice Resmi FILEPHOTOKU.STD</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="copyInvoiceWhatsApp()" class="px-4 py-2.5 rounded-xl bg-sage hover: opacity-95 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition">
+              <i class="ph-bold ph-whatsapp-logo text-base"></i> Kirim Tagihan + Link Drive ke WA
+            </button>
+            <button onclick="window.print()" class="px-4 py-2.5 rounded-xl bg-espresso hover:bg-terracotta text-white text-xs font-semibold flex items-center gap-1.5 shadow transition">
+              <i class="ph-bold ph-printer text-base"></i> Cetak / Simpan PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <!-- Left Editor Panel -->
+          <div class="lg:col-span-6 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-5">
+            <div class="flex items-center justify-between">
+              <h3 class="font-editorial text-lg font-bold text-espresso">1. Pilih Klien & Paket Layanan</h3>
+              <button onclick="switchTab('setup')" class="text-[11px] font-bold text-terracotta hover:underline flex items-center gap-1">
+                <i class="ph-bold ph-sliders-horizontal"></i> Edit Master Pricelist
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-espressoMuted mb-1.5">Pilih Booking Klien</label>
+              <select id="invoice-client-select" onchange="selectInvoiceClient(this.value)" class="w-full px-4 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm font-semibold text-espresso focus:outline-none focus:ring-2 focus:ring-terracotta"></select>
+            </div>
+
+            <!-- Package Items Checklist -->
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between text-xs font-semibold text-espressoMuted">
+                <span>Rincian Paket & Add-On Klien Ini</span>
+                <span>Nominal (Rp)</span>
+              </div>
+              <div id="invoice-items-editor" class="space-y-2"></div>
+
+              <!-- Ambil cepat dari Master Pricelist -->
+              <div class="pt-3 border-t border-[#F0E4D7] space-y-2">
+                <label class="block text-[11px] font-bold text-terracotta uppercase">Tambah Cepat dari Pricelist / Add-On FILEPHOTOKU.STD:</label>
+                <div class="flex gap-2">
+                  <select id="invoice-pricelist-picker" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso"></select>
+                  <button onclick="addPricelistToCurrentInvoice()" class="px-3.5 py-2 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shrink-0 transition">
+                    + Masukkan
+                  </button>
+                </div>
+              </div>
+
+              <!-- Add custom item -->
+              <div class="pt-2 flex flex-col sm:flex-row gap-2">
+                <input id="custom-item-name" type="text" placeholder="Item kustom (mis: Transport Luar Kota)" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+                <input id="custom-item-price" type="number" placeholder="Harga (mis: 150000)" class="w-full sm:w-36 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-mono" />
+                <button onclick="addCustomInvoiceItem()" class="px-3.5 py-2 rounded-xl bg-beige hover:bg-[#e2ceb8] text-espresso text-xs font-semibold shrink-0 transition">
+                  + Item Lain
+                </button>
+              </div>
+            </div>
+
+            <!-- DP Paid & Bank Account -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#F0E4D7]">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-semibold text-espressoMuted">Nominal DP Diterima (Rp)</label>
+                  <button onclick="setThirtyPercentDP()" class="text-[10px] font-bold text-terracotta hover:underline">Set DP 30%</button>
+                </div>
+                <input id="invoice-dp-input" type="number" step="50000" oninput="updateInvoiceDP(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-sm font-bold text-espresso focus:outline-none focus:ring-2 focus:ring-terracotta" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-espressoMuted mb-1">Rekening Tujuan</label>
+                <input id="invoice-bank-input" type="text" oninput="updateInvoiceBank(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-semibold text-espresso" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Live Printable Invoice Card -->
+          <div id="invoice-print-area" class="lg:col-span-6 bg-white rounded-3xl border-2 border-[#DEC9B5] p-6 sm:p-8 shadow-warm-lg space-y-6">
+            <div class="flex items-start justify-between border-b border-[#EEDFD0] pb-5">
+              <div class="flex items-center gap-3.5">
+                <!-- Official Logo Badge on Invoice -->
+                <div class="px-4 py-3 rounded-2xl text-white flex items-center gap-3 shadow border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #11313F 55%, #071720 100%);">
+                  <div>
+                    <div class="text-sm tracking-wider leading-none font-sans">
+                      <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-bold text-[#FF6B00] text-xs">.STD</span>
+                    </div>
+                    <div class="text-[7px] tracking-[0.2em] uppercase text-white/80 mt-1 leading-tight">
+                      CAPTURE YOUR STORY
+                    </div>
+                  </div>
+                  <svg viewBox="0 0 100 100" class="w-5 h-5 shrink-0">
+                    <g transform="translate(50,50) rotate(-10)">
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(60)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(120)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(180)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(240)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(300)" />
+                    </g>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-editorial text-xl font-bold text-espresso" id="inv-preview-brand">FILEPHOTOKU.STD</h3>
+                  <p class="text-xs text-espressoMuted" id="inv-preview-city">Banyuwangi • WA: 085708001457</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span id="inv-status-badge" class="px-3 py-1 rounded-full bg-amberLight text-amberWarn text-xs font-bold">BELUM LUNAS</span>
+                <p class="font-mono text-xs text-espressoMuted mt-1.5" id="inv-number-display">INV/FP/2026/01</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-xs">
+              <div class="p-3.5 rounded-2xl bg-cream">
+                <p class="text-espressoMuted">Ditagihkan Kepada:</p>
+                <p class="font-bold text-sm text-espresso mt-0.5" id="inv-client-name">Diajeng & Firza</p>
+                <p class="text-espressoMuted mt-0.5" id="inv-client-date">Sabtu, 24 Okt 2026</p>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-cream">
+                <p class="text-espressoMuted">Lokasi & Paket Utama:</p>
+                <p class="font-bold text-sm text-espresso mt-0.5" id="inv-client-venue">Banyuwangi</p>
+                <p class="text-terracotta font-semibold mt-0.5 truncate" id="inv-client-drive">WEDDING - MAGAZINE BOOK 02</p>
+              </div>
+            </div>
+
+            <!-- Line Items Table -->
+            <div class="space-y-2.5 border-b border-dashed border-[#DEC9B5] pb-4" id="inv-preview-lines"></div>
+
+            <!-- Totals -->
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between text-espressoMuted">
+                <span>Total Paket & Add-On</span>
+                <span class="font-mono font-semibold text-espresso" id="inv-subtotal">Rp 3.100.000</span>
+              </div>
+              <div class="flex justify-between text-sage">
+                <span>DP Diterima (Minimal 30%)</span>
+                <span class="font-mono font-semibold" id="inv-dp-display">- Rp 1.000.000</span>
+              </div>
+              <div class="flex justify-between items-center pt-3 border-t border-[#EEDFD0] text-base font-bold text-espresso">
+                <span>Sisa Tagihan Pelunasan</span>
+                <span class="font-mono text-xl text-terracotta" id="inv-remaining">Rp 2.100.000</span>
+              </div>
+            </div>
+
+            <!-- Syarat & Ketentuan Resmi FILEPHOTOKU.STD -->
+            <div class="p-3.5 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3] text-[11px] text-espressoMuted space-y-1">
+              <p class="font-bold text-espresso">Syarat & Ketentuan Resmi FILEPHOTOKU.STD:</p>
+              <ul class="list-disc pl-4 space-y-0.5">
+                <li>Booking sah setelah pembayaran DP minimal 30% (DP tidak dapat dikembalikan jika batal sepihak).</li>
+                <li>Pelunasan dilakukan maksimal setelah acara / sesi pemotretan selesai.</li>
+                <li>File preview dikirim 1–3 hari, estimasi hasil edit 3–7 hari kerja via Google Drive / Flashdisk / DVD sesuai paket.</li>
+              </ul>
+            </div>
+
+            <!-- Footer Payment Info -->
+            <div class="p-4 rounded-2xl bg-beige/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <p class="text-espressoMuted font-medium">Pembayaran & Konfirmasi Resmi:</p>
+                <p class="font-mono font-bold text-espresso text-sm mt-0.5" id="inv-bank-display">Konfirmasi WA Admin: 085708001457</p>
+              </div>
+              <div class="text-right">
+                <span class="italic font-editorial text-terracotta text-base">FILEPHOTOKU.STD Authorized</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 4: JADWAL KRU, HITUNG FEE TIM OTOMATIS & SHARELOC 1-KLIK       -->
+      <!-- =================================================================== -->
+      <section id="tab-crew" class="tab-section space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-terracotta">Penugasan Tim & Shareloc H-1</span>
+            <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-espresso">Jadwal Kru, Fee Tim & Shareloc Otomatis</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="switchTab('setup'); switchSetupSubTab('crew');" class="px-3.5 py-2 rounded-xl bg-beige hover:bg-[#e3d0bc] text-espresso text-xs font-bold flex items-center gap-1.5 transition">
+              <i class="ph-bold ph-users-three text-terracotta"></i> Edit Master Crew
+            </button>
+            <select id="crew-job-select" onchange="selectCrewJob(this.value)" class="px-4 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs sm:text-sm font-semibold text-espresso shadow-sm"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Crew Assignment & Auto Fee Calculator -->
+          <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#F0E4D7] pb-4">
+              <div>
+                <h3 class="font-editorial text-lg font-bold text-espresso" id="crew-panel-title">Tim Liputan • Diajeng & Firza</h3>
+                <p class="text-xs text-espressoMuted">Pilih kru dari daftar tim Anda — nominal fee otomatis mengikuti standar atau bisa disesuaikan</p>
+              </div>
+              <span id="crew-shortage-badge" class="px-3 py-1 rounded-full bg-dangerLight text-danger text-xs font-bold flex items-center gap-1">
+                <i class="ph-fill ph-warning-circle"></i> 1 Posisi Kosong!
+              </span>
+            </div>
+
+            <div id="crew-roles-list" class="space-y-3"></div>
+
+            <!-- Add Extra Position to This Job -->
+            <div class="pt-2 flex flex-wrap items-center gap-2">
+              <input id="job-extra-role-input" type="text" placeholder="Tambah posisi di job ini (mis: Tambah Fotografer Rp 300rb)" class="flex-1 px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+              <button onclick="addExtraRoleToCurrentJob()" class="px-4 py-2 rounded-xl bg-beige hover:bg-[#e4d1bc] text-espresso text-xs font-bold transition">
+                + Tambah Posisi Kru
+              </button>
+            </div>
+
+            <!-- Fee Summary Box -->
+            <div class="p-4 rounded-2xl bg-[#102E3B] text-cream flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p class="text-xs text-[#CDE0E8]">Total Fee Tim Otomatis (Proyek Ini)</p>
+                <p class="font-mono text-2xl font-bold text-white mt-0.5" id="crew-total-fee">Rp 750.000</p>
+              </div>
+              <div class="sm:text-right">
+                <p class="text-xs text-[#CDE0E8]">Profit Bersih Studio (Setelah Fee Kru)</p>
+                <p class="font-mono text-lg font-bold text-[#6EE7B7]" id="crew-net-profit">Rp 2.350.000</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: 1-Click Shareloc & Briefing Generator -->
+          <div class="lg:col-span-5 bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm flex flex-col justify-between space-y-5">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-1 rounded-lg bg-beige text-terracotta text-[11px] font-bold">Solusi Anti-Lupa H-1</span>
+                <span class="text-xs text-espressoMuted font-mono"><i class="ph-fill ph-moon-stars text-amberWarn"></i> Siap Kirim</span>
+              </div>
+              <h3 class="font-editorial text-xl font-bold text-espresso">Broadcast Shareloc & Briefing Kru</h3>
+              <p class="text-xs text-espressoMuted leading-relaxed">
+                Kirim lokasi acara, jam standby, paket yang diambil klien, dan penugasan Memory Card ke grup WhatsApp kru <strong>FILEPHOTOKU.STD</strong> dalam satu klik.
+              </p>
+
+              <div class="space-y-3 pt-1">
+                <div>
+                  <label class="text-xs font-semibold text-espressoMuted">Lokasi Acara / Kampus / Venue</label>
+                  <input id="crew-venue-input" type="text" oninput="updateCrewVenue(this.value)" class="w-full mt-1 px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs font-semibold text-espressoMuted">Jam Standby Kru</label>
+                    <input id="crew-time-input" type="text" oninput="updateCrewTime(this.value)" class="w-full mt-1 px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-semibold text-espresso" />
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-espressoMuted">Kode Memory Card</label>
+                    <input id="crew-card-input" type="text" oninput="updateCrewCardCode(this.value)" class="w-full mt-1 px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-semibold text-espresso" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Preview Bubble WhatsApp -->
+              <div class="p-4 rounded-2xl bg-[#E7F8EE] border border-[#B7E4C7] text-xs space-y-1.5 text-[#1B4332]">
+                <div class="flex items-center justify-between font-bold">
+                  <span class="flex items-center gap-1"><i class="ph-fill ph-map-pin text-danger"></i> Briefing Liputan FILEPHOTOKU.STD</span>
+                  <span class="text-[10px] font-mono">✓✓</span>
+                </div>
+                <p id="shareloc-preview-text" class="leading-relaxed whitespace-pre-line text-[11px]"></p>
+              </div>
+            </div>
+
+            <button onclick="sendSharelocToAllCrew()" class="w-full py-3 px-4 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-warm transition">
+              <i class="ph-bold ph-paper-plane-tilt text-base"></i>
+              <span>Kirim Shareloc & Briefing ke Semua Kru (1-Klik)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 5: ASET, GEAR & MEMORY CARD BACKUP TRACKER                     -->
+      <!-- =================================================================== -->
+      <section id="tab-gear" class="tab-section space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-terracotta">Keamanan Alat & File Raw/JPG</span>
+            <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-espresso">Checklist Gear, Memory Card & Flashdisk</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="switchTab('setup'); switchSetupSubTab('gear');" class="px-3.5 py-2 rounded-xl bg-beige hover:bg-[#e3d0bc] text-espresso text-xs font-bold transition">
+              ⚙️ Edit Master Alat & Card
+            </button>
+            <button onclick="returnAllGear()" class="px-4 py-2 rounded-xl bg-sage text-white text-xs font-semibold hover:opacity-95 shadow transition">
+              <i class="ph-bold ph-check-square-offset mr-1"></i> Kembalikan Semua Alat ke Studio
+            </button>
+          </div>
+        </div>
+
+        <!-- Memory Card & Harddisk Backup Tracker -->
+        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#F2E6D8] pb-3">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-driveBlue">Anti File Hilang / Terformat</span>
+              <h3 class="font-editorial text-xl font-bold text-espresso">Status Backup Memory Card Kamera</h3>
+            </div>
+            <span class="text-xs text-espressoMuted">Klik tombol status pada kartu memori untuk mengubah status backup</span>
+          </div>
+          <div id="memory-card-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Physical Gear Grid -->
+        <div>
+          <h3 class="font-editorial text-xl font-bold text-espresso mb-3">Checklist Alat Liputan (Kamera, Lensa, Flash, Gimbal)</h3>
+          <div id="gear-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 6: PORTAL SORTIR FOTO KLIEN MANDIRI (KODE FILE FP_xxx.JPG)     -->
+      <!-- =================================================================== -->
+      <section id="tab-photosort" class="tab-section space-y-6">
+        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 sm:p-8 shadow-warm space-y-6">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#F0E4D7] pb-5">
+            <div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-beige text-terracotta text-xs font-bold mb-2">
+                <i class="ph-fill ph-sparkle"></i> Portal Sortir Klien FILEPHOTOKU.STD — Bebas Chat WA Lama
+              </div>
+              <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-espresso">
+                Sortir Kode File Kamera — <span class="text-terracotta">Diajeng & Firza</span>
+              </h2>
+              <p class="text-xs sm:text-sm text-espressoMuted mt-1">
+                Klien cukup klik foto favorit untuk masuk daftar <strong>Edit & Cetak Album / Pigora 14RS / 10RS</strong>, lalu Anda tinggal salin deretan kode file-nya ke Lightroom.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="setPhotoSortFilter('all')" id="filter-photo-all" class="px-3.5 py-2 rounded-xl bg-espresso text-white text-xs font-semibold transition">
+                Semua File (8)
+              </button>
+              <button onclick="setPhotoSortFilter('selected')" id="filter-photo-selected" class="px-3.5 py-2 rounded-xl bg-beige text-espresso text-xs font-semibold transition">
+                Dipilih Klien (<span id="selected-photo-count">3</span>)
+              </button>
+              <button onclick="copySelectedPhotoCodes()" class="px-4 py-2 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-semibold flex items-center gap-1.5 shadow transition">
+                <i class="ph-bold ph-copy"></i> Salin Kode File (Lightroom)
+              </button>
+            </div>
+          </div>
+
+          <!-- Selected Photo Codes Bar -->
+          <div class="p-4 rounded-2xl bg-cream border border-[#DEC9B5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 text-xs">
+              <span class="px-2.5 py-1 rounded-lg bg-sageLight text-sage font-bold">Kode File Terpilih:</span>
+              <span id="selected-photo-pills" class="font-mono font-bold text-espresso">FP_012.JPG, FP_048.JPG, FP_105.JPG</span>
+            </div>
+            <span class="text-[11px] text-espressoMuted">Estimasi hasil edit: 3–7 hari kerja sesuai ketentuan FILEPHOTOKU.STD</span>
+          </div>
+
+          <!-- Gallery Grid -->
+          <div id="photo-sort-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- MENU 7: WEBSITE PORTOFOLIO, FORM BOOKING ONLINE & MITRA VENDOR      -->
+      <!-- =================================================================== -->
+      <section id="tab-website" class="tab-section space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Left: Mobile Mockup Booking Online FILEPHOTOKU.STD -->
+          <div class="lg:col-span-5 flex flex-col items-center">
+            <div class="w-full max-w-sm rounded-[38px] border-8 border-[#2B1B12] bg-white shadow-warm-lg overflow-hidden">
+              <div class="bg-[#081A24] text-cream px-5 py-3 flex items-center justify-between text-[11px]">
+                <span class="font-mono">filephotoku.std/booking</span>
+                <span class="px-2 py-0.5 rounded bg-sage text-white font-bold text-[10px]">Online 24/7</span>
+              </div>
+              <div class="p-5 space-y-4">
+                <!-- Banner Logo Resmi di Mockup Website -->
+                <div class="rounded-2xl p-4 text-white flex items-center justify-between shadow" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
+                  <div>
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-[#FF6B00]">PORTAL BOOKING RESMI</span>
+                    <div class="text-lg tracking-wider leading-none font-sans mt-1" id="pub-mockup-brand">
+                      <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-bold text-[#FF6B00] text-xs">.STD</span>
+                    </div>
+                    <p class="text-[10px] text-white/80 mt-1" id="pub-mockup-city">⭐ 4.9 • Banyuwangi</p>
+                  </div>
+                  <svg viewBox="0 0 100 100" class="w-7 h-7 shrink-0">
+                    <g transform="translate(50,50) rotate(-10)">
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(60)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(120)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(180)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(240)" />
+                      <polygon points="-7,-42 7,-42 2.2,0 -2.2,0" fill="#FF6B00" transform="rotate(300)" />
+                    </g>
+                  </svg>
+                </div>
+
+                <p class="text-xs text-espressoMuted leading-relaxed" id="pub-mockup-tagline">
+                  Capture Your Story — Wedding, Engagement, Graduation & Maternity Photography in Banyuwangi.
+                </p>
+
+                <!-- Pilih Layanan (Otomatis dari Macam-Macam Jasa FILEPHOTOKU.STD) -->
+                <div>
+                  <label class="text-[11px] font-bold text-espresso uppercase">1. Pilih Kategori Layanan</label>
+                  <div id="pub-service-buttons" class="grid grid-cols-2 gap-2 mt-1.5 text-xs"></div>
+                </div>
+
+                <!-- Pilih Paket dari Pricelist -->
+                <div>
+                  <label class="text-[11px] font-bold text-espresso uppercase">2. Pilih Paket Pricelist</label>
+                  <select id="pub-package-select" class="w-full mt-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso"></select>
+                </div>
+
+                <!-- Data Diri Klien -->
+                <div class="space-y-2.5 pt-1">
+                  <label class="text-[11px] font-bold text-espresso uppercase">3. Data Booking Klien</label>
+                  <input id="pub-client-name" type="text" placeholder="Nama Pengantin / Wisudawan (mis: Rina & Bayu)" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+                  <div class="grid grid-cols-2 gap-2">
+                    <input id="pub-client-day" type="number" min="1" max="31" placeholder="Tgl Okt (1-31)" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-mono" />
+                    <input id="pub-client-venue" type="text" placeholder="Lokasi / Kampus" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+                  </div>
+                </div>
+
+                <button onclick="submitPublicBooking()" class="w-full py-3 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shadow transition">
+                  Simulasi Klien Kirim Booking →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Kolaborasi Ekosistem Vendor Pernikahan Banyuwangi -->
+          <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E6D5C3] p-6 sm:p-8 shadow-warm flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <span class="text-xs font-bold uppercase tracking-wider text-terracotta">Ekosistem Rekanan FILEPHOTOKU.STD Banyuwangi</span>
+              <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-espresso">Kolaborasi Vendor & Kalkulator Paket Bundling</h2>
+              <p class="text-xs sm:text-sm text-espressoMuted leading-relaxed">
+                Centang vendor rekanan (MUA, Wedding Organizer, Dekorasi, Seserahan) untuk membuat simulasi harga <strong>Paket All-In Bersama FILEPHOTOKU.STD</strong> secara transparan.
+              </p>
+
+              <div id="vendor-ecosystem-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"></div>
+            </div>
+
+            <!-- Bundling Calculator Box -->
+            <div class="p-5 rounded-2xl bg-cream border border-[#DEC9B5] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span class="text-[11px] font-bold uppercase text-terracotta">Total Simulasi Paket Bundling</span>
+                <div class="font-mono text-2xl font-bold text-espresso mt-0.5" id="bundle-total-price">Rp 6.600.000</div>
+                <p class="text-xs text-espressoMuted" id="bundle-selected-count">3 Layanan Tergabung</p>
+              </div>
+              <button onclick="copyBundleProposal()" class="px-4 py-2.5 rounded-xl bg-espresso hover:bg-terracotta text-white text-xs font-semibold flex items-center gap-2 shadow transition">
+                <i class="ph-bold ph-share-network"></i> Salin Penawaran Bundling
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MOBILE BOTTOM NAVIGATION ==================== -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E6D5C3] px-1.5 py-1.5 flex items-center justify-around shadow-warm-lg">
+    <button onclick="switchTab('setup')" data-tab="setup" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-terracotta">
+      <i class="ph-fill ph-sliders-horizontal text-lg"></i>
+      <span class="text-[9px] font-bold mt-0.5">Atur PL</span>
+    </button>
+    <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
+      <i class="ph-fill ph-squares-four text-lg"></i>
+      <span class="text-[9px] font-semibold mt-0.5">Beranda</span>
+    </button>
+    <button onclick="switchTab('booking')" data-tab="booking" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
+      <i class="ph-fill ph-calendar-check text-lg"></i>
+      <span class="text-[9px] font-semibold mt-0.5">Booking</span>
+    </button>
+    <button onclick="switchTab('invoice')" data-tab="invoice" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
+      <i class="ph-fill ph-receipt text-lg"></i>
+      <span class="text-[9px] font-semibold mt-0.5">Invoice</span>
+    </button>
+    <button onclick="switchTab('crew')" data-tab="crew" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
+      <i class="ph-fill ph-users-three text-lg"></i>
+      <span class="text-[9px] font-semibold mt-0.5">Kru</span>
+    </button>
+    <button onclick="switchTab('photosort')" data-tab="photosort" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
+      <i class="ph-fill ph-images text-lg"></i>
+      <span class="text-[9px] font-semibold mt-0.5">Sortir</span>
+    </button>
+  </nav>
+
+  <!-- ==================== MODAL: TAMBAH BOOKING BARU ==================== -->
+  <div id="modal-new-booking" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-warm-lg border border-[#E6D5C3] space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#F0E4D7] pb-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase text-terracotta">Input Jadwal Baru FILEPHOTOKU.STD</span>
+          <h3 class="font-editorial text-xl font-bold text-espresso">Tambah Booking Klien</h3>
+        </div>
+        <button onclick="closeNewBookingModal()" class="w-8 h-8 rounded-full bg-beige text-espresso flex items-center justify-center hover:bg-terracotta hover:text-white transition">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <div>
+          <label class="font-semibold text-espressoMuted">Nama Klien / Pasangan / Wisudawan</label>
+          <input id="modal-couple-input" type="text" placeholder="Contoh: Diajeng & Firza / Iko Sugiarto, S.Pd" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm font-semibold text-espresso" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-semibold text-espressoMuted">Tanggal (Oktober 2026)</label>
+            <input id="modal-day-input" type="number" min="1" max="31" value="28" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-sm font-bold text-espresso" />
+          </div>
+          <div>
+            <label class="font-semibold text-espressoMuted">Kategori Jasa</label>
+            <select id="modal-category-input" onchange="filterModalPackagesByCategory()" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm font-semibold text-espresso"></select>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="font-semibold text-espressoMuted">Pilih Paket dari Pricelist FILEPHOTOKU.STD</label>
+            <button onclick="closeNewBookingModal(); switchTab('setup');" class="text-[10px] font-bold text-terracotta hover:underline">+ Edit Pricelist</button>
+          </div>
+          <select id="modal-package-select" onchange="applySelectedPackageToModal()" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso"></select>
+        </div>
+
+        <div>
+          <label class="font-semibold text-espressoMuted">Lokasi Venue / Gedung / Kampus di Banyuwangi</label>
+          <input id="modal-venue-input" type="text" placeholder="Contoh: Gedung Wanita / Kampus UNIBA Banyuwangi" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-sm text-espresso" />
+        </div>
+
+        <div>
+          <label class="font-semibold text-espressoMuted">Link Folder Google Drive / Penyimpanan File</label>
+          <input id="modal-drive-input" type="text" placeholder="https://drive.google.com/drive/folders/..." class="w-full mt-1 px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs text-espresso" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-semibold text-espressoMuted">Harga Paket (Rp)</label>
+            <input id="modal-price-input" type="number" step="50000" oninput="autoCalcModalDP()" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-sm font-bold text-espresso" />
+          </div>
+          <div>
+            <label class="font-semibold text-espressoMuted">DP Masuk (Min 30%)</label>
+            <input id="modal-dp-input" type="number" step="50000" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-sm font-bold text-sage" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#F0E4D7]">
+        <button onclick="closeNewBookingModal()" class="px-4 py-2.5 rounded-xl bg-beige text-espresso text-xs font-semibold">Batal</button>
+        <button onclick="saveNewBooking()" class="px-5 py-2.5 rounded-xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shadow">Simpan Booking</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PANDUAN PENGGUNAAN ==================== -->
+  <div id="modal-guide" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-warm-lg border border-[#E6D5C3] space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#F0E4D7] pb-3">
+        <div>
+          <span class="text-xs font-bold uppercase text-terracotta">Panduan Kerja FILEPHOTOKU.STD</span>
+          <h3 class="font-editorial text-2xl font-bold text-espresso">Cara Menggunakan Sistem Secara Berurutan</h3>
+        </div>
+        <button onclick="closeGuideModal()" class="w-8 h-8 rounded-full bg-beige text-espresso flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm text-espresso leading-relaxed">
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3]">
+          <p class="font-bold text-terracotta">Langkah 1 — Cek & Sesuaikan Pricelist (Termasuk Maternity) di Menu ⚙️ Atur Data Studio</p>
+          <p class="text-espressoMuted mt-1">Seluruh harga Wedding (Silver 01–02, Magazine Book 01–02), Engagement (01–03), dan Graduation (Basic, Standard, Premium, Video Only) sudah terisi sesuai PDF Anda. Untuk <strong>Foto Maternity</strong>, silakan ubah harga drafnya kapan saja di menu <strong>⚙️ Atur Data Studio</strong>.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3]">
+          <p class="font-bold text-terracotta">Langkah 2 — Input Booking Baru & Hitung DP 30% Otomatis</p>
+          <p class="text-espressoMuted mt-1">Klik tombol <strong>+ Booking Baru</strong> di kanan atas, pilih kategori & paketnya, maka harga beserta nominal DP minimal 30% langsung terisi otomatis.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3]">
+          <p class="font-bold text-terracotta">Langkah 3 — Cetak Invoice PDF & Pantau Pengiriman File (Preview 1–3 Hari, Edit 3–7 Hari)</p>
+          <p class="text-espressoMuted mt-1">Di menu <strong>3. Invoice Otomatis</strong>, lembar invoice sudah dilengkapi logo resmi <strong>FILEPHOTOKU.STD</strong> dan syarat ketentuan sesuai PDF Pricing Guide Anda.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeGuideModal()" class="px-6 py-2.5 rounded-xl bg-terracotta text-white text-xs font-bold">Siap, Mengerti!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: KONFIRMASI RESET DATA ==================== -->
+  <div id="modal-reset" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-warm-lg border border-[#E6D5C3] space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-dangerLight text-danger flex items-center justify-center shrink-0">
+          <i class="ph-fill ph-warning text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-editorial text-lg font-bold text-espresso">Reset ke Pricelist Awal FILEPHOTOKU.STD?</h3>
+          <p class="text-xs text-espressoMuted">Seluruh paket akan dikembalikan ke sesuai 3 file PDF Pricing Guide resmi Anda.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeResetModal()" class="px-4 py-2 rounded-xl bg-beige text-espresso text-xs font-semibold">Batal</button>
+        <button onclick="confirmResetAllData()" class="px-4 py-2 rounded-xl bg-danger text-white text-xs font-bold">Ya, Reset Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION ==================== -->
+  <div id="toast-box" class="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-50 hidden max-w-md bg-[#081A24] text-cream px-4 py-3.5 rounded-2xl shadow-warm-lg border border-[#234B5C] flex items-start gap-3">
+    <i class="ph-fill ph-check-circle text-[#FF6B00] text-xl shrink-0 mt-0.5"></i>
+    <div class="text-xs leading-relaxed">
+      <p class="font-bold text-white" id="toast-title">Berhasil!</p>
+      <p class="text-[#CDE0E8] mt-0.5" id="toast-message">Pesan telah disalin ke clipboard.</p>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    const STORAGE_KEY = 'FILEPHOTOKU_STD_OS_V7_CLEAN';
+
+    const DEFAULT_STATE = {
+      activeTab: 'setup',
+      setupSubTab: 'pricelist',
+      bookingView: 'list',
+      bookingFilter: 'Semua',
+      photoSortFilter: 'all',
+      selectedInvoiceClientId: 'FP-JOB-01',
+      selectedCrewJobId: 'FP-JOB-01',
+      selectedPublicService: 'Wedding',
+      studioProfile: {
+        brandName: 'FILEPHOTOKU.STD',
+        city: 'Banyuwangi',
+        tagline: 'Capture Your Story — Wedding, Engagement, Graduation & Maternity Photography in Banyuwangi.',
+        adminWa: '085708001457',
+        bankInfo: 'Transfer Bank / E-Wallet Resmi FILEPHOTOKU.STD (Konfirmasi WA: 085708001457)'
+      },
+      serviceCategories: [
+        'Wedding',
+        'Engagement',
+        'Graduation',
+        'Maternity',
+        'Add-On Wedding',
+        'Add-On Graduation'
+      ],
+      pricelist: [
+        // ===== PAKET WEDDING (Sesuai PDF Pricing Guide Wedding FILEPHOTOKU.STD) =====
+        {
+          id: 'WED-01',
+          category: 'Wedding',
+          name: 'WEDDING - SILVER 01',
+          price: 1490000,
+          desc: 'Full time acara, File unlimited, Cetak 4R 80 foto, Album MBT Magnetik, Cetak 14RS + pigora, Cetak 10RS + laminating + pigora, Cetak 10RS + laminating, File save G Drive'
+        },
+        {
+          id: 'WED-02',
+          category: 'Wedding',
+          name: 'WEDDING - SILVER 02',
+          price: 1750000,
+          desc: 'Full time acara, File unlimited, Cetak 4R 120 foto, Album Jumbo Magnetik, Cetak 14RS + pigora, Cetak 14RS, Cetak 10RS + laminating + pigora, File save Flashdisk'
+        },
+        {
+          id: 'WED-03',
+          category: 'Wedding',
+          name: 'WEDDING - MAGAZINE BOOK 01',
+          price: 2300000,
+          desc: 'File unlimited, Full time acara, Cetak kolase, Album magazine book 20x30, Cetak 14RS + pigora, Cetak 14RS, Cetak 10RS + laminating, Data save flashdisk'
+        },
+        {
+          id: 'WED-04',
+          category: 'Wedding',
+          name: 'WEDDING - MAGAZINE BOOK 02',
+          price: 2600000,
+          desc: 'File unlimited, Full time acara, Cetak kolase, Album magazine book 20x30, Cetak 4R 40 lembar, Album Magnetik, Cetak 14RS + pigora, Cetak 14RS, Data save flashdisk'
+        },
+
+        // ===== PAKET ENGAGEMENT (Sesuai PDF Pricing Guide Engagement FILEPHOTOKU.STD) =====
+        {
+          id: 'ENG-01',
+          category: 'Engagement',
+          name: 'ENGAGEMENT 01',
+          price: 500000,
+          desc: 'Full time acara, File unlimited, Edit 20 foto, File save G Drive / DVD'
+        },
+        {
+          id: 'ENG-02',
+          category: 'Engagement',
+          name: 'ENGAGEMENT 02',
+          price: 650000,
+          desc: 'Full time acara, File unlimited, Cetak 4R 40 lembar, Album biasa, Cetak 10RS, File save G Drive / DVD'
+        },
+        {
+          id: 'ENG-03',
+          category: 'Engagement',
+          name: 'ENGAGEMENT 03',
+          price: 750000,
+          desc: 'Full time acara, File unlimited, Cetak 4R 40 lembar, Album magnetik, Cetak 10RS + laminating (2 pcs), File save G Drive / DVD'
+        },
+
+        // ===== PAKET GRADUATION (Sesuai PDF Pricing Guide Graduation FILEPHOTOKU.STD) =====
+        {
+          id: 'GRAD-01',
+          category: 'Graduation',
+          name: 'GRADUATION - BASIC',
+          price: 299000,
+          desc: '1 Graduate with Family, 45 Minutes Duration, 1 Location, Unlimited Shoot, 15 Edited Photos, Free hapus simple objek bocor, All File on GDrive'
+        },
+        {
+          id: 'GRAD-02',
+          category: 'Graduation',
+          name: 'GRADUATION - STANDARD',
+          price: 350000,
+          desc: '1 Graduate with Family & Friend, 60 Minutes Duration, 1 Location, Unlimited Shoot, 20 Edited Photos, Free hapus simple objek bocor, All File on GDrive'
+        },
+        {
+          id: 'GRAD-03',
+          category: 'Graduation',
+          name: 'GRADUATION - PREMIUM',
+          price: 500000,
+          desc: '1 Graduate with Family & Friend, 90 Minutes Duration, 1 Location, Unlimited Shoot, 30 Edited Photos, Free hapus simple objek bocor, All File on GDrive, 30-60 Sec Cinematic'
+        },
+        {
+          id: 'GRAD-04',
+          category: 'Graduation',
+          name: 'GRADUATION - VIDEO ONLY',
+          price: 350000,
+          desc: '1 Graduate with Family & Friend, 60 Minutes Duration, 1 Location, 30-60 Sec Cinematic Video'
+        },
+
+        // ===== DRAF PAKET MATERNITY (Siap Diedit Kapan Saja) =====
+        {
+          id: 'MAT-01',
+          category: 'Maternity',
+          name: 'MATERNITY - BASIC (Draft PL - Siap Edit)',
+          price: 350000,
+          desc: '60 Menit Sesi Foto Maternity bersama Suami, 1 Lokasi, Unlimited Shoot, 20 Edited Photos, All File on GDrive'
+        },
+        {
+          id: 'MAT-02',
+          category: 'Maternity',
+          name: 'MATERNITY - EXCLUSIVE (Draft PL - Siap Edit)',
+          price: 550000,
+          desc: '90 Menit Sesi Foto Maternity, Unlimited Shoot, 30 Edited Photos, Cetak 10RS + Pigora, Video Reels 30-60 Sec, All File on GDrive'
+        },
+
+        // ===== ADD-ON WEDDING (Sesuai PDF Wedding Hal. 4) =====
+        {
+          id: 'ADD-W1',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Tambah Fotografer',
+          price: 300000,
+          desc: 'Tambahan 1 fotografer kru FILEPHOTOKU.STD'
+        },
+        {
+          id: 'ADD-W2',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Tambah Durasi 1 Jam (Wedding)',
+          price: 150000,
+          desc: 'Perpanjangan waktu liputan acara 1 jam'
+        },
+        {
+          id: 'ADD-W3',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Cetak 4R Tambahan (20 lembar)',
+          price: 50000,
+          desc: 'Tambahan cetak foto ukuran 4R sebanyak 20 lembar'
+        },
+        {
+          id: 'ADD-W4',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Cetak 14RS + Pigora',
+          price: 300000,
+          desc: 'Tambahan cetak pembesaran 14RS lengkap dengan pigora'
+        },
+        {
+          id: 'ADD-W5',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Album Magnetik Tambahan',
+          price: 450000,
+          desc: 'Tambahan 1 unit album magnetik'
+        },
+        {
+          id: 'ADD-W6',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Flashdisk Eksklusif',
+          price: 75000,
+          desc: 'Flashdisk eksklusif penyimpanan seluruh file'
+        },
+        {
+          id: 'ADD-W7',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Video Cinematic 30-60 detik',
+          price: 250000,
+          desc: 'Video teaser cinematic durasi 30-60 detik'
+        },
+        {
+          id: 'ADD-W8',
+          category: 'Add-On Wedding',
+          name: 'Add-On: Video Highlight 1-3 menit',
+          price: 500000,
+          desc: 'Video highlight dokumentasi acara durasi 1-3 menit'
+        },
+
+        // ===== ADD-ON GRADUATION (Sesuai PDF Graduation Hal. 4) =====
+        {
+          id: 'ADD-G1',
+          category: 'Add-On Graduation',
+          name: 'Add-On Grad: Tambah Durasi 30 Menit',
+          price: 100000,
+          desc: 'Perpanjangan sesi foto wisuda 30 menit'
+        },
+        {
+          id: 'ADD-G2',
+          category: 'Add-On Graduation',
+          name: 'Add-On Grad: Extra Edit 10 Foto',
+          price: 50000,
+          desc: 'Tambahan editing 10 foto pilihan'
+        },
+        {
+          id: 'ADD-G3',
+          category: 'Add-On Graduation',
+          name: 'Add-On Grad: Graduation Typography Design',
+          price: 50000,
+          desc: 'Desain tipografi estetik edisi wisuda ("Nanti Kita Cerita Tentang Gelar Ini")'
+        },
+        {
+          id: 'ADD-G4',
+          category: 'Add-On Graduation',
+          name: 'Add-On Grad: Cetak 10R',
+          price: 25000,
+          desc: 'Cetak foto wisuda ukuran 10R'
+        },
+        {
+          id: 'ADD-G5',
+          category: 'Add-On Graduation',
+          name: 'Add-On Grad: Cetak 12R + Frame',
+          price: 125000,
+          desc: 'Cetak foto ukuran 12R lengkap dengan frame/pigora'
+        },
+        {
+          id: 'ADD-G6',
+          category: 'Add-On Graduation',
+          name: 'Add-On Grad: Cetak 16R + Frame',
+          price: 250000,
+          desc: 'Cetak foto ukuran 16R lengkap dengan frame/pigora'
+        }
+      ],
+      crewMaster: [
+        { id: 'CR-1', name: 'Kamu (Owner FILEPHOTOKU.STD)', role: 'Fotografer Utama', defaultFee: 0, phone: '085708001457' },
+        { id: 'CR-2', name: 'Second Shooter (Partner FG)', role: 'Second Shooter', defaultFee: 300000, phone: '081355667788' },
+        { id: 'CR-3', name: 'Videografer Cinematic', role: 'Videografer', defaultFee: 300000, phone: '081299887766' },
+        { id: 'CR-4', name: 'Asisten & Lighting Kru', role: 'Asisten Lighting & File', defaultFee: 150000, phone: '081944556677' },
+        { id: 'CR-5', name: 'Editor Foto & Kolase Album', role: 'Editor Foto / Video', defaultFee: 150000, phone: '081388990011' }
+      ],
+      bookedOctoberDates: [
+        { day: 1, cat: 'Wedding' },
+        { day: 3, cat: 'Graduation' },
+        { day: 4, cat: 'Wedding' },
+        { day: 5, cat: 'Engagement' },
+        { day: 6, cat: 'Graduation' },
+        { day: 8, cat: 'Maternity' },
+        { day: 10, cat: 'Wedding' },
+        { day: 11, cat: 'Wedding' },
+        { day: 12, cat: 'Graduation' },
+        { day: 13, cat: 'Graduation' },
+        { day: 15, cat: 'Engagement' },
+        { day: 17, cat: 'Wedding' },
+        { day: 18, cat: 'Wedding' },
+        { day: 19, cat: 'Maternity' },
+        { day: 20, cat: 'Graduation' },
+        { day: 24, cat: 'Wedding' },
+        { day: 25, cat: 'Engagement' },
+        { day: 26, cat: 'Engagement' },
+        { day: 27, cat: 'Graduation' },
+        { day: 29, cat: 'Wedding' }
+      ],
+      bookings: [
+        {
+          id: 'FP-JOB-01',
+          couple: 'Diajeng & Firza',
+          day: 24,
+          month: 'Okt 2026',
+          dueDate: '24 Okt 2026 (Selesai Acara)',
+          category: 'Wedding',
+          serviceType: 'WEDDING - MAGAZINE BOOK 02 + Video Highlight',
+          venue: 'Banyuwangi (Kediaman Mempelai)',
+          mapsUrl: 'https://maps.google.com/?q=Banyuwangi',
+          gatherTime: '06.00 WIB',
+          driveUrl: 'https://drive.google.com/drive/folders/filephotoku-diajeng-firza',
+          stage: 3,
+          fileStage: 3,
+          memoryCardCode: 'Card #A1 & Flashdisk',
+          totalPrice: 3100000,
+          dpPaid: 1000000,
+          isOverdue: true,
+          items: [
+            { name: 'WEDDING - MAGAZINE BOOK 02', price: 2600000, checked: true },
+            { name: 'Add-On: Video Highlight 1-3 menit', price: 500000, checked: true },
+            { name: 'Add-On: Tambah Fotografer', price: 300000, checked: false }
+          ],
+          crew: [
+            { role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 },
+            { role: 'Second Shooter', assignee: 'Kosong', fee: 300000 },
+            { role: 'Videografer', assignee: 'Videografer Cinematic', fee: 300000 },
+            { role: 'Asisten Lighting & File', assignee: 'Asisten & Lighting Kru', fee: 150000 },
+            { role: 'Editor Foto & Tone', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }
+          ]
+        },
+        {
+          id: 'FP-JOB-02',
+          couple: 'Elsa & Midad',
+          day: 15,
+          month: 'Okt 2026',
+          dueDate: '15 Okt 2026 (Selesai Acara)',
+          category: 'Engagement',
+          serviceType: 'ENGAGEMENT 03 (Album Magnetik + 10RS)',
+          venue: 'Banyuwangi',
+          mapsUrl: 'https://maps.google.com/?q=Banyuwangi',
+          gatherTime: '08.00 WIB',
+          driveUrl: 'https://drive.google.com/drive/folders/filephotoku-elsa-midad',
+          stage: 4,
+          fileStage: 4,
+          memoryCardCode: 'Card #B1 (GDrive / DVD)',
+          totalPrice: 750000,
+          dpPaid: 300000,
+          isOverdue: false,
+          items: [
+            { name: 'ENGAGEMENT 03', price: 750000, checked: true },
+            { name: 'Add-On: Video Cinematic 30-60 detik', price: 250000, checked: false }
+          ],
+          crew: [
+            { role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 },
+            { role: 'Asisten Lighting & File', assignee: 'Asisten & Lighting Kru', fee: 100000 }
+          ]
+        },
+        {
+          id: 'FP-JOB-03',
+          couple: 'Iko Sugiarto Adi W, S.Pd',
+          day: 12,
+          month: 'Okt 2026',
+          dueDate: '12 Okt 2026 (Lunas)',
+          category: 'Graduation',
+          serviceType: 'GRADUATION - PREMIUM (Universitas PGRI Banyuwangi)',
+          venue: 'Kampus UNIBA Banyuwangi',
+          mapsUrl: 'https://maps.google.com/?q=Universitas+PGRI+Banyuwangi',
+          gatherTime: '07.30 WIB',
+          driveUrl: 'https://drive.google.com/drive/folders/filephotoku-iko-wisuda',
+          stage: 4,
+          fileStage: 5,
+          memoryCardCode: 'Card #C1 (All File GDrive)',
+          totalPrice: 550000,
+          dpPaid: 550000,
+          isOverdue: false,
+          items: [
+            { name: 'GRADUATION - PREMIUM', price: 500000, checked: true },
+            { name: 'Add-On Grad: Graduation Typography Design', price: 50000, checked: true }
+          ],
+          crew: [
+            { role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }
+          ]
+        },
+        {
+          id: 'FP-JOB-04',
+          couple: 'Miftahur Rizqi, S.H',
+          day: 20,
+          month: 'Okt 2026',
+          dueDate: '20 Okt 2026 (Selesai Sesi)',
+          category: 'Graduation',
+          serviceType: 'GRADUATION - STANDARD + Typography Design',
+          venue: 'Banyuwangi',
+          mapsUrl: 'https://maps.google.com/?q=Banyuwangi',
+          gatherTime: '09.00 WIB',
+          driveUrl: 'https://drive.google.com/drive/folders/filephotoku-rizqi-sh',
+          stage: 2,
+          fileStage: 2,
+          memoryCardCode: 'Card #A2',
+          totalPrice: 400000,
+          dpPaid: 150000,
+          isOverdue: true,
+          items: [
+            { name: 'GRADUATION - STANDARD', price: 350000, checked: true },
+            { name: 'Add-On Grad: Graduation Typography Design', price: 50000, checked: true }
+          ],
+          crew: [
+            { role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }
+          ]
+        }
+      ],
+      memoryCards: [
+        { id: 'MC-1', code: 'Card #A1 & #A2 (SDXC 128GB)', jobName: 'Wedding Diajeng & Firza (24 Okt)', hddLocation: 'PC Utama FILEPHOTOKU.STD & Flashdisk Klien', status: 'Sudah Backup ke HDD FILEPHOTOKU.STD' },
+        { id: 'MC-2', code: 'Card #B1 (SanDisk Extreme 128GB)', jobName: 'Engagement Elsa & Midad (15 Okt)', hddLocation: 'Sedang proses upload ke GDrive', status: 'Belum Backup - JANGAN FORMAT!' },
+        { id: 'MC-3', code: 'Card #C1 (Lexar Pro 64GB)', jobName: 'Graduation Iko Sugiarto, S.Pd', hddLocation: 'All File on GDrive Selesai', status: 'Aman - Siap Format Ulang' }
+      ],
+      gearList: [
+        { id: 'G1', name: 'Lensa 35mm f/1.4 GM', icon: 'ph-aperture', holder: 'Tas Utama FILEPHOTOKU.STD', status: 'Tersedia di Studio' },
+        { id: 'G2', name: 'Flash Godox V1 Pro + Trigger', icon: 'ph-lightning', holder: 'Asisten & Lighting Kru', status: 'Dibawa Liputan' },
+        { id: 'G3', name: 'Baterai Cadangan Kamera (6 Unit)', icon: 'ph-battery-charging', holder: 'Charger Dock Studio', status: 'Perlu Cek' },
+        { id: 'G4', name: 'Memory Card Case (8 Slot SD/CF)', icon: 'ph-memory', holder: 'Pouch Anti-Air FILEPHOTOKU.STD', status: 'Tersedia di Studio' },
+        { id: 'G5', name: 'Tripod & Gimbal Stabilizer', icon: 'ph-film-slate', holder: 'Videografer Cinematic', status: 'Dibawa Liputan' },
+        { id: 'G6', name: 'Reflektor 5-in-1 + Lightstand', icon: 'ph-sun', holder: 'Bagasi Tim', status: 'Tersedia di Studio' },
+        { id: 'G7', name: 'Kamera Utama Body #1 (FILEPHOTOKU.STD)', icon: 'ph-camera', holder: 'Drybox Studio Rak A', status: 'Tersedia di Studio' },
+        { id: 'G8', name: 'SSD Eksternal & Stok Flashdisk Klien', icon: 'ph-hard-drives', holder: 'Meja Kerja Editor', status: 'Tersedia di Studio' }
+      ],
+      photos: [
+        { code: 'FP_012.JPG', title: 'Potret Pengantin Diajeng & Firza', note: 'Tone hangat khas FILEPHOTOKU.STD', selected: true, img: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_027.JPG', title: 'Detail Cincin Engagement Elsa & Midad', note: 'Close up cincin tunangan', selected: false, img: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_048.JPG', title: 'Potret Pengantin Adat Banyuwangi', note: 'Halaman pembuka Magazine Book 20x30', selected: true, img: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_064.JPG', title: 'Prosesi Sungkeman Haru', note: 'Cetak 14RS + Pigora', selected: false, img: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_089.JPG', title: 'Foto Wisuda Iko Sugiarto, S.Pd', note: 'Hapus simple objek bocor', selected: false, img: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_105.JPG', title: 'Wisuda Miftahur Rizqi, S.H', note: 'Desain Typography "Nanti Kita Cerita Tentang Gelar Ini"', selected: true, img: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_142.JPG', title: 'Candid Bahagia Bersama Sahabat', note: 'Masuk kolase album', selected: false, img: 'https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=500&q=80' },
+        { code: 'FP_198.JPG', title: 'Foto Keluarga Besar di Pelaminan', note: 'Cetak 10RS + Laminating', selected: false, img: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=500&q=80' }
+      ],
+      vendors: [
+        { name: 'MUA Partner Banyuwangi', role: 'MUA', fee: 3500000, rating: '4.9', city: 'Rekanan FILEPHOTOKU.STD', checkedInBundle: true },
+        { name: 'Paket Magazine Book 02 — FILEPHOTOKU.STD', role: 'Fotografi & Album', fee: 2600000, rating: '5.0', city: 'Banyuwangi', checkedInBundle: true },
+        { name: 'Add-On Video Highlight 1-3 Menit', role: 'Videografer', fee: 500000, rating: '4.9', city: 'Tim FILEPHOTOKU.STD', checkedInBundle: true },
+        { name: 'Mitra Wedding Organizer Banyuwangi', role: 'Wedding Organizer', fee: 3500000, rating: '5.0', city: 'Banyuwangi', checkedInBundle: false },
+        { name: 'Mitra Mahar & Seserahan Banyuwangi', role: 'Mahar & Seserahan', fee: 1200000, rating: '4.9', city: 'Banyuwangi', checkedInBundle: false },
+        { name: 'Mitra Dekorasi Pelaminan', role: 'Dekorasi', fee: 6500000, rating: '4.8', city: 'Banyuwangi', checkedInBundle: false }
+      ]
+    };
+
+    let appState = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+        const parsed = JSON.parse(raw);
+        return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
+      } catch (e) {
+        return JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.error('Gagal menyimpan state:', e);
+      }
+    }
+
+    function formatRupiah(num) {
+      const n = Number(num) || 0;
+      return 'Rp ' + n.toLocaleString('id-ID');
+    }
+
+    function copyTextToClipboard(text, title = 'Berhasil Disalin!') {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(title, text.length > 110 ? text.slice(0, 110) + '...' : text);
+      } catch (err) {
+        showToast('Info', 'Teks siap disalin.');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    let toastTimer = null;
+    function showToast(title, message = '') {
+      const box = document.getElementById('toast-box');
+      document.getElementById('toast-title').textContent = title;
+      document.getElementById('toast-message').textContent = message;
+      box.classList.remove('hidden');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        box.classList.add('hidden');
+      }, 3600);
+    }
+
+    // ==================== NAVIGATION & SETUP SUBTABS ====================
+    function switchTab(tabId) {
+      appState.activeTab = tabId;
+      saveState();
+
+      document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.dataset.tab === tabId) {
+          btn.className = 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-terracotta text-white shadow-sm transition';
+        } else {
+          btn.className = 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition';
+        }
+      });
+
+      document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        if (btn.dataset.tab === tabId) {
+          btn.classList.remove('text-espressoMuted');
+          btn.classList.add('text-terracotta');
+        } else {
+          btn.classList.remove('text-terracotta');
+          btn.classList.add('text-espressoMuted');
+        }
+      });
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function switchSetupSubTab(subId) {
+      appState.setupSubTab = subId;
+      saveState();
+
+      ['pricelist', 'crew', 'gear', 'profile'].forEach(id => {
+        const panel = document.getElementById('setup-panel-' + id);
+        const btn = document.getElementById('subtab-btn-' + id);
+        if (panel) panel.classList.toggle('active', id === subId);
+        if (btn) {
+          btn.className = id === subId
+            ? 'py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 bg-espresso text-white shadow transition'
+            : 'py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 text-espresso hover:bg-white/60 transition';
+        }
+      });
+    }
+
+    // ==================== MENU 0: SETUP & MASTER DATA RENDER ====================
+    function renderSetupMaster() {
+      // 1. Render Service Categories
+      const catList = document.getElementById('setup-service-categories-list');
+      if (catList) {
+        catList.innerHTML = appState.serviceCategories.map((cat, idx) => `
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
+            <span>${cat}</span>
+            <button onclick="deleteServiceCategory(${idx})" class="text-espressoMuted hover:text-danger" title="Hapus kategori">
+              <i class="ph-bold ph-x"></i>
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // Populate category dropdown in Pricelist form
+      const plCatSelect = document.getElementById('pl-new-category');
+      if (plCatSelect) {
+        plCatSelect.innerHTML = appState.serviceCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+      }
+
+      // 2. Render Pricelist Items
+      const plBadge = document.getElementById('pricelist-count-badge');
+      if (plBadge) plBadge.textContent = `${appState.pricelist.length} Paket Aktif`;
+
+      const plContainer = document.getElementById('setup-pricelist-container');
+      if (plContainer) {
+        plContainer.innerHTML = appState.pricelist.map((item, idx) => `
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center p-3 rounded-2xl bg-cream/60 border border-[#E6D5C3] hover:border-terracotta transition">
+            <div class="sm:col-span-2">
+              <select onchange="updatePricelistField(${idx}, 'category', this.value)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-terracotta">
+                ${appState.serviceCategories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <input type="text" value="${item.name}" oninput="updatePricelistField(${idx}, 'name', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso" />
+            </div>
+            <div class="sm:col-span-2">
+              <input type="number" step="25000" value="${item.price}" oninput="updatePricelistField(${idx}, 'price', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-espresso" />
+            </div>
+            <div class="sm:col-span-4">
+              <input type="text" value="${item.desc || ''}" oninput="updatePricelistField(${idx}, 'desc', this.value)" placeholder="Rincian paket..." class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs text-espressoMuted" />
+            </div>
+            <div class="sm:col-span-1 flex justify-end">
+              <button onclick="deletePricelistItem(${idx})" class="p-2 rounded-xl bg-dangerLight text-danger hover:bg-danger hover:text-white transition" title="Hapus paket">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 3. Render Crew Master
+      const crewBadge = document.getElementById('crew-master-count-badge');
+      if (crewBadge) crewBadge.textContent = `${appState.crewMaster.length} Kru Terdaftar`;
+
+      const crewList = document.getElementById('setup-crew-master-list');
+      if (crewList) {
+        crewList.innerHTML = appState.crewMaster.map((cr, idx) => `
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center p-3 rounded-2xl bg-cream/60 border border-[#E6D5C3]">
+            <div class="sm:col-span-4">
+              <input type="text" value="${cr.name}" oninput="updateCrewMasterField(${idx}, 'name', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso" />
+            </div>
+            <div class="sm:col-span-3">
+              <input type="text" value="${cr.role}" oninput="updateCrewMasterField(${idx}, 'role', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold text-terracotta" />
+            </div>
+            <div class="sm:col-span-2">
+              <input type="number" step="25000" value="${cr.defaultFee}" oninput="updateCrewMasterField(${idx}, 'defaultFee', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-espresso" />
+            </div>
+            <div class="sm:col-span-2">
+              <input type="text" value="${cr.phone || ''}" oninput="updateCrewMasterField(${idx}, 'phone', this.value)" placeholder="No. WA" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs text-espressoMuted" />
+            </div>
+            <div class="sm:col-span-1 flex justify-end">
+              <button onclick="deleteCrewMasterItem(${idx})" class="p-2 rounded-xl bg-dangerLight text-danger hover:bg-danger hover:text-white transition">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 4. Render Gear & Memory Card in Setup
+      const gearListEl = document.getElementById('setup-gear-list');
+      if (gearListEl) {
+        gearListEl.innerHTML = appState.gearList.map((g, idx) => `
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-cream/70 border border-[#E6D5C3]">
+            <input type="text" value="${g.name}" oninput="updateGearSetupField(${idx}, 'name', this.value)" class="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#DEC9B5] text-xs font-bold text-espresso" />
+            <input type="text" value="${g.holder}" oninput="updateGearSetupField(${idx}, 'holder', this.value)" class="w-40 px-2.5 py-1.5 rounded-lg bg-white border border-[#DEC9B5] text-xs text-espressoMuted" />
+            <button onclick="deleteGearItem(${idx})" class="p-1.5 rounded-lg bg-dangerLight text-danger hover:bg-danger hover:text-white transition">
+              <i class="ph-bold ph-trash"></i>
+            </button>
+          </div>
+        `).join('');
+      }
+
+      const mcListEl = document.getElementById('setup-mc-list');
+      if (mcListEl) {
+        mcListEl.innerHTML = appState.memoryCards.map((mc, idx) => `
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-cream/70 border border-[#E6D5C3]">
+            <input type="text" value="${mc.code}" oninput="updateMcSetupField(${idx}, 'code', this.value)" class="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-espresso" />
+            <button onclick="deleteMcItem(${idx})" class="p-1.5 rounded-lg bg-dangerLight text-danger hover:bg-danger hover:text-white transition">
+              <i class="ph-bold ph-trash"></i>
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // 5. Render Studio Profile fields
+      const prof = appState.studioProfile;
+      const bName = document.getElementById('prof-brand-name');
+      if (bName && document.activeElement !== bName) bName.value = prof.brandName;
+      const bCity = document.getElementById('prof-city');
+      if (bCity && document.activeElement !== bCity) bCity.value = prof.city;
+      const bWa = document.getElementById('prof-wa');
+      if (bWa && document.activeElement !== bWa) bWa.value = prof.adminWa;
+      const bBank = document.getElementById('prof-bank');
+      if (bBank && document.activeElement !== bBank) bBank.value = prof.bankInfo;
+      const bTag = document.getElementById('prof-tagline');
+      if (bTag && document.activeElement !== bTag) bTag.value = prof.tagline;
+
+      // Update Branding labels across UI
+      const sbTitle = document.getElementById('sidebar-brand-title');
+      if (sbTitle) sbTitle.textContent = prof.brandName;
+      const sbCity = document.getElementById('sidebar-brand-city');
+      if (sbCity) sbCity.textContent = prof.city;
+      const mbTitle = document.getElementById('mobile-brand-title');
+      if (mbTitle) mbTitle.textContent = prof.brandName;
+      const dashBadge = document.getElementById('dash-brand-badge');
+      if (dashBadge) dashBadge.textContent = prof.brandName;
+
+      const invBankEl = document.getElementById('invoice-bank-input');
+      if (invBankEl && document.activeElement !== invBankEl) invBankEl.value = prof.bankInfo;
+    }
+
+    function addServiceCategory() {
+      const input = document.getElementById('new-service-cat-input');
+      const val = input.value.trim();
+      if (!val) {
+        showToast('Kategori Kosong', 'Ketik nama kategori jasa terlebih dahulu.');
+        return;
+      }
+      if (!appState.serviceCategories.includes(val)) {
+        appState.serviceCategories.push(val);
+        input.value = '';
+        saveState();
+        renderAll();
+        showToast('Kategori Jasa Ditambahkan', `Jasa "${val}" siap digunakan.`);
+      }
+    }
+
+    function deleteServiceCategory(idx) {
+      const removed = appState.serviceCategories.splice(idx, 1);
+      saveState();
+      renderAll();
+      showToast('Kategori Dihapus', `Kategori "${removed[0]}" telah dihapus.`);
+    }
+
+    function addPricelistItem() {
+      const cat = document.getElementById('pl-new-category').value;
+      const name = document.getElementById('pl-new-name').value.trim();
+      const price = Number(document.getElementById('pl-new-price').value) || 0;
+      const desc = document.getElementById('pl-new-desc').value.trim();
+      if (!name || price <= 0) {
+        showToast('Data Paket Belum Lengkap', 'Masukkan nama paket dan harga (Rp).');
+        return;
+      }
+      appState.pricelist.push({
+        id: 'PL-' + Date.now(),
+        category: cat,
+        name,
+        price,
+        desc
+      });
+      document.getElementById('pl-new-name').value = '';
+      document.getElementById('pl-new-price').value = '';
+      document.getElementById('pl-new-desc').value = '';
+      saveState();
+      renderAll();
+      showToast('Paket Pricelist Ditambahkan', `${name} (${formatRupiah(price)}) aktif di sistem.`);
+    }
+
+    function updatePricelistField(idx, field, value) {
+      if (!appState.pricelist[idx]) return;
+      appState.pricelist[idx][field] = field === 'price' ? (Number(value) || 0) : value;
+      saveState();
+      renderInvoiceSection();
+      renderWebsiteAndVendors();
+    }
+
+    function deletePricelistItem(idx) {
+      const removed = appState.pricelist.splice(idx, 1);
+      saveState();
+      renderAll();
+      showToast('Paket Dihapus', `${removed[0]?.name || 'Paket'} dihapus dari Pricelist.`);
+    }
+
+    function addCrewMasterItem() {
+      const name = document.getElementById('crew-new-name').value.trim();
+      const role = document.getElementById('crew-new-role').value;
+      const defaultFee = Number(document.getElementById('crew-new-fee').value) || 0;
+      const phone = document.getElementById('crew-new-wa').value.trim();
+      if (!name) {
+        showToast('Nama Kru Kosong', 'Masukkan nama panggilan/lengkap kru.');
+        return;
+      }
+      appState.crewMaster.push({
+        id: 'CR-' + Date.now(),
+        name,
+        role,
+        defaultFee,
+        phone
+      });
+      document.getElementById('crew-new-name').value = '';
+      document.getElementById('crew-new-fee').value = '';
+      document.getElementById('crew-new-wa').value = '';
+      saveState();
+      renderAll();
+      showToast('Kru Baru Terdaftar', `${name} (${role}) ditambahkan ke daftar tim.`);
+    }
+
+    function updateCrewMasterField(idx, field, value) {
+      if (!appState.crewMaster[idx]) return;
+      appState.crewMaster[idx][field] = field === 'defaultFee' ? (Number(value) || 0) : value;
+      saveState();
+      renderCrewSection();
+    }
+
+    function deleteCrewMasterItem(idx) {
+      const removed = appState.crewMaster.splice(idx, 1);
+      saveState();
+      renderAll();
+      showToast('Kru Dihapus', `${removed[0]?.name || 'Kru'} telah dihapus.`);
+    }
+
+    function addGearFromSetup() {
+      const name = document.getElementById('setup-gear-name').value.trim();
+      const holder = document.getElementById('setup-gear-holder').value.trim() || 'Drybox Studio';
+      if (!name) {
+        showToast('Nama Alat Kosong', 'Masukkan nama kamera/lensa/alat.');
+        return;
+      }
+      appState.gearList.push({
+        id: 'G-' + Date.now(),
+        name,
+        icon: 'ph-camera',
+        holder,
+        status: 'Tersedia di Studio'
+      });
+      document.getElementById('setup-gear-name').value = '';
+      document.getElementById('setup-gear-holder').value = '';
+      saveState();
+      renderAll();
+      showToast('Alat Ditambahkan', `${name} masuk ke inventaris FILEPHOTOKU.STD.`);
+    }
+
+    function updateGearSetupField(idx, field, value) {
+      if (!appState.gearList[idx]) return;
+      appState.gearList[idx][field] = value;
+      saveState();
+      renderGearSection();
+    }
+
+    function deleteGearItem(idx) {
+      appState.gearList.splice(idx, 1);
+      saveState();
+      renderAll();
+    }
+
+    function addMemoryCardFromSetup() {
+      const code = document.getElementById('setup-mc-code').value.trim();
+      const jobName = document.getElementById('setup-mc-job').value.trim() || 'Siap Pakai Liputan';
+      if (!code) {
+        showToast('Kode Card Kosong', 'Masukkan nama/nomor Memory Card.');
+        return;
+      }
+      appState.memoryCards.push({
+        id: 'MC-' + Date.now(),
+        code,
+        jobName,
+        hddLocation: 'Studio FILEPHOTOKU.STD',
+        status: 'Aman - Siap Format Ulang'
+      });
+      document.getElementById('setup-mc-code').value = '';
+      document.getElementById('setup-mc-job').value = '';
+      saveState();
+      renderAll();
+      showToast('Memory Card Terdaftar', `${code} ditambahkan.`);
+    }
+
+    function updateMcSetupField(idx, field, value) {
+      if (!appState.memoryCards[idx]) return;
+      appState.memoryCards[idx][field] = value;
+      saveState();
+      renderGearSection();
+    }
+
+    function deleteMcItem(idx) {
+      appState.memoryCards.splice(idx, 1);
+      saveState();
+      renderAll();
+    }
+
+    function saveStudioProfile() {
+      appState.studioProfile.brandName = document.getElementById('prof-brand-name').value.trim() || 'FILEPHOTOKU.STD';
+      appState.studioProfile.city = document.getElementById('prof-city').value.trim() || 'Banyuwangi';
+      appState.studioProfile.adminWa = document.getElementById('prof-wa').value.trim() || '085708001457';
+      appState.studioProfile.bankInfo = document.getElementById('prof-bank').value.trim();
+      appState.studioProfile.tagline = document.getElementById('prof-tagline').value.trim();
+      saveState();
+      renderSetupMaster();
+      renderInvoiceSection();
+      renderWebsiteAndVendors();
+    }
+
+    function exportStudioData() {
+      const dataStr = JSON.stringify(appState, null, 2);
+      copyTextToClipboard(dataStr, 'JSON Data Studio Disalin ke Clipboard!');
+    }
+
+    // ==================== DASHBOARD & FINANCIAL CALCULATIONS ====================
+    function calculateFinancialSummary() {
+      let totalGross = 0;
+      let totalDP = 0;
+      let totalUnpaid = 0;
+      let overdueCount = 0;
+      let totalCrewFeeAll = 0;
+
+      appState.bookings.forEach(b => {
+        const activeItemsSum = b.items.filter(i => i.checked).reduce((acc, cur) => acc + Number(cur.price || 0), 0);
+        b.totalPrice = activeItemsSum > 0 ? activeItemsSum : b.totalPrice;
+
+        const remaining = Math.max(0, b.totalPrice - b.dpPaid);
+        totalGross += b.totalPrice;
+        totalDP += Number(b.dpPaid || 0);
+        totalUnpaid += remaining;
+        if (remaining > 0 && b.isOverdue) overdueCount += 1;
+
+        const crewFee = b.crew.reduce((acc, c) => acc + Number(c.fee || 0), 0);
+        totalCrewFeeAll += crewFee;
+      });
+
+      const netProfit = Math.max(0, totalGross - totalCrewFeeAll);
+
+      document.getElementById('dash-total-unpaid').textContent = formatRupiah(totalUnpaid);
+      document.getElementById('dash-overdue-count').textContent = `${overdueCount} Perlu Ditagih`;
+      document.getElementById('nav-overdue-pill').textContent = `${overdueCount} Lewat`;
+      document.getElementById('nav-booking-badge').textContent = `${appState.bookings.length} Job`;
+
+      document.getElementById('stat-unpaid').textContent = formatRupiah(totalUnpaid);
+      document.getElementById('stat-unpaid-sub').textContent = `Dari ${appState.bookings.length} proyek aktif`;
+      document.getElementById('stat-dp').textContent = formatRupiah(totalDP);
+      document.getElementById('stat-gross').textContent = formatRupiah(totalGross);
+      document.getElementById('stat-profit').textContent = formatRupiah(netProfit);
+
+      const hasEmptyCrew = appState.bookings.some(b => b.crew.some(c => c.assignee === 'Kosong'));
+      const warningDot = document.getElementById('crew-warning-dot');
+      if (warningDot) warningDot.style.display = hasEmptyCrew ? 'inline-block' : 'none';
+    }
+
+    function renderDashboardFileTracker() {
+      const container = document.getElementById('dashboard-file-tracker');
+      if (!container) return;
+      const fileStepLabels = [
+        '1. Backup Card',
+        '2. Preview (1-3 Hari)',
+        '3. Sortir Klien',
+        '4. Edit (3-7 Hari)',
+        '5. GDrive / Flashdisk Selesai'
+      ];
+
+      container.innerHTML = appState.bookings.map(b => `
+        <div class="p-4 rounded-2xl bg-cream border border-[#E6D5C3] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-terracotta text-white text-[10px] font-bold">${b.category}</span>
+              <span class="font-bold text-sm text-espresso">${b.couple}</span>
+              <span class="font-mono text-xs text-espressoMuted">(${b.day} ${b.month})</span>
+            </div>
+            <p class="text-xs text-espressoMuted mt-1 font-mono">
+              <i class="ph-fill ph-memory text-terracotta"></i> ${b.memoryCardCode || 'Card #A1'} •
+              <span class="text-driveBlue font-semibold">${b.serviceType}</span>
+            </p>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+            ${fileStepLabels.map((lbl, idx) => {
+              const stepNum = idx + 1;
+              const done = stepNum <= (b.fileStage || 1);
+              return `
+                <button onclick="updateClientFileStage('${b.id}', ${stepNum})"
+                  class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition ${done ? 'bg-driveBlue text-white shadow-sm' : 'bg-white text-espressoMuted border border-[#DEC9B5] hover:bg-beige'}">
+                  ${done ? '✓ ' : ''}${lbl}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateClientFileStage(bookingId, stepNum) {
+      const b = appState.bookings.find(x => x.id === bookingId);
+      if (!b) return;
+      b.fileStage = stepNum;
+      saveState();
+      renderDashboardFileTracker();
+      showToast('Status File Diperbarui', `Progres file ${b.couple} sekarang di tahap ${stepNum}/5.`);
+    }
+
+    function renderMiniOctoberCalendar() {
+      const grid = document.getElementById('mini-october-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 3; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'py-2 text-transparent select-none';
+        empty.textContent = '.';
+        grid.appendChild(empty);
+      }
+
+      const bookedDays = appState.bookedOctoberDates.map(d => d.day);
+      document.getElementById('october-booked-badge').textContent = `${bookedDays.length} / 20 Booked`;
+
+      for (let day = 1; day <= 31; day++) {
+        const isBooked = bookedDays.includes(day);
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          switchTab('booking');
+          setBookingView('calendar');
+        };
+        btn.className = isBooked
+          ? 'py-2 rounded-xl bg-terracotta text-white font-mono font-bold shadow-sm hover:bg-terracottaDark transition'
+          : 'py-2 rounded-xl bg-cream text-espressoMuted hover:bg-beige font-mono transition';
+        btn.textContent = day;
+        grid.appendChild(btn);
+      }
+    }
+
+    function remindAllOverdueClients() {
+      const overdues = appState.bookings.filter(b => (b.totalPrice - b.dpPaid) > 0);
+      if (overdues.length === 0) {
+        showToast('Semua Tagihan Lunas!', 'Tidak ada klien yang menunggak pembayaran.');
+        return;
+      }
+      const lines = overdues.map(b => `• ${b.couple} (${b.serviceType}) — Sisa: ${formatRupiah(b.totalPrice - b.dpPaid)}`).join('\n');
+      const msg = `Halo Kak, kami dari admin *${appState.studioProfile.brandName}* (${appState.studioProfile.city}) ingin mengingatkan rincian sisa pelunasan dokumentasi:\n\n${lines}\n\nPelunasan dapat ditransfer ke:\n*${appState.studioProfile.bankInfo}*\nKonfirmasi WA: ${appState.studioProfile.adminWa}\nTerima kasih banyak Kak 🙏✨`;
+      copyTextToClipboard(msg, 'Pesan Pengingat Pelunasan Disalin!');
+    }
+
+    // ==================== MENU 2: BOOKING, DRIVE & WORKFLOW ====================
+    function setBookingView(view) {
+      appState.bookingView = view;
+      saveState();
+      const listEl = document.getElementById('booking-list-container');
+      const calEl = document.getElementById('booking-calendar-container');
+      const btnList = document.getElementById('view-btn-list');
+      const btnCal = document.getElementById('view-btn-calendar');
+
+      if (view === 'list') {
+        listEl.classList.remove('hidden');
+        calEl.classList.add('hidden');
+        btnList.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-espresso shadow-sm transition';
+        btnCal.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-espressoMuted hover:text-espresso transition';
+      } else {
+        listEl.classList.add('hidden');
+        calEl.classList.remove('hidden');
+        btnCal.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-espresso shadow-sm transition';
+        btnList.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-espressoMuted hover:text-espresso transition';
+      }
+    }
+
+    function renderBookingCategoryChips() {
+      const container = document.getElementById('booking-category-chips');
+      if (!container) return;
+      const allCats = ['Semua', ...appState.serviceCategories.filter(c => !c.startsWith('Add-On'))];
+      container.innerHTML = allCats.map(cat => {
+        const active = appState.bookingFilter === cat;
+        return `
+          <button onclick="filterBookingCategory('${cat}')"
+            class="px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${active ? 'bg-espresso text-white shadow' : 'bg-white border border-[#DEC9B5] text-espresso hover:bg-beige'}">
+            ${cat}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function filterBookingCategory(cat) {
+      appState.bookingFilter = cat;
+      saveState();
+      renderBookingCategoryChips();
+      renderBookingsList();
+    }
+
+    function renderBookingsList() {
+      const container = document.getElementById('booking-list-container');
+      if (!container) return;
+
+      const filtered = appState.bookingFilter === 'Semua'
+        ? appState.bookings
+        : appState.bookings.filter(b => b.category === appState.bookingFilter);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-8 text-center space-y-3">
+            <p class="font-editorial text-lg font-bold text-espresso">Belum ada booking pada kategori "${appState.bookingFilter}"</p>
+            <button onclick="openNewBookingModal()" class="px-4 py-2 rounded-xl bg-terracotta text-white text-xs font-bold">+ Tambah Booking</button>
+          </div>
+        `;
+        return;
+      }
+
+      const stageNames = ['1. Booking & DP 30%', '2. Persiapan', '3. Hari H Liputan', '4. Edit & Serah File'];
+
+      container.innerHTML = filtered.map(b => {
+        const remaining = Math.max(0, b.totalPrice - b.dpPaid);
+        const statusBadge = remaining === 0
+          ? `<span class="px-3 py-1 rounded-full bg-sageLight text-sage text-xs font-bold">LUNAS</span>`
+          : `<span class="px-3 py-1 rounded-full ${b.isOverdue ? 'bg-dangerLight text-danger' : 'bg-amberLight text-amberWarn'} text-xs font-bold">Sisa ${formatRupiah(remaining)}</span>`;
+
+        const stepsHtml = stageNames.map((label, idx) => {
+          const stepNum = idx + 1;
+          const isDone = stepNum <= b.stage;
+          return `
+            <button onclick="advanceBookingStage('${b.id}', ${stepNum})"
+              class="flex-1 py-2 px-2 rounded-xl text-[11px] font-bold border transition flex items-center justify-center gap-1 ${
+                isDone
+                  ? 'bg-terracotta text-white border-terracotta shadow-sm'
+                  : 'bg-cream text-espressoMuted border-[#DEC9B5] hover:bg-beige'
+              }">
+              <i class="ph-fill ${isDone ? 'ph-check-circle' : 'ph-circle'}"></i>
+              <span class="truncate">${label}</span>
+            </button>
+          `;
+        }).join('');
+
+        return `
+          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-6 shadow-warm space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="space-y-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="px-2.5 py-0.5 rounded-lg bg-beige text-terracotta font-mono text-xs font-bold">${b.day} ${b.month}</span>
+                  <span class="px-2.5 py-0.5 rounded-lg bg-cream border border-[#DEC9B5] text-espresso text-xs font-semibold">${b.category}</span>
+                  <span class="text-xs font-semibold text-espressoMuted">• ${b.serviceType}</span>
+                </div>
+                <h3 class="font-editorial text-xl font-bold text-espresso">${b.couple}</h3>
+                <p class="text-xs text-espressoMuted flex items-center gap-1.5">
+                  <i class="ph-fill ph-map-pin text-terracotta"></i> ${b.venue} (Standby ${b.gatherTime})
+                </p>
+              </div>
+
+              <div class="flex flex-col sm:items-end gap-2">
+                ${statusBadge}
+                <div class="font-mono text-xs text-espressoMuted">
+                  Total Paket: <strong class="text-espresso">${formatRupiah(b.totalPrice)}</strong> • DP: <strong class="text-sage">${formatRupiah(b.dpPaid)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Baris Link Google Drive Klien -->
+            <div class="p-3.5 rounded-2xl bg-driveLight/60 border border-[#C6DAFC] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-2 text-xs flex-1 min-w-0">
+                <i class="ph-fill ph-google-drive-logo text-driveBlue text-lg shrink-0"></i>
+                <span class="font-bold text-espresso shrink-0">Link GDrive / File:</span>
+                <input type="text" value="${b.driveUrl || ''}" onchange="updateBookingDriveUrl('${b.id}', this.value)"
+                  class="flex-1 bg-white px-3 py-1.5 rounded-xl border border-[#B2CCF7] font-mono text-xs text-driveBlue focus:outline-none" />
+              </div>
+              <button onclick="copyClientDriveLink('${b.id}')" class="px-3 py-1.5 rounded-xl bg-driveBlue text-white text-xs font-semibold shrink-0 hover:opacity-95 transition">
+                <i class="ph-bold ph-copy mr-1"></i> Salin Link GDrive
+              </button>
+            </div>
+
+            <!-- 4-Stage Workflow Bar -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-[11px] font-semibold text-espressoMuted">
+                <span>Alur Kerja Proyek (Klik tahapan untuk update progres):</span>
+                <span class="text-terracotta">Tahap ${b.stage} dari 4</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                ${stepsHtml}
+              </div>
+            </div>
+
+            <!-- Quick Jump Actions -->
+            <div class="pt-3 border-t border-[#F2E6D8] flex flex-wrap items-center justify-between gap-2">
+              <span class="text-[11px] text-espressoMuted font-mono">Media: <strong>${b.memoryCardCode || 'Card #A1'}</strong></span>
+              <div class="flex flex-wrap items-center gap-2">
+                <button onclick="jumpToInvoice('${b.id}')" class="px-3 py-1.5 rounded-xl bg-beige hover:bg-[#e3d0bc] text-espresso text-xs font-semibold flex items-center gap-1 transition">
+                  <i class="ph-bold ph-receipt"></i> Buka Invoice
+                </button>
+                <button onclick="jumpToCrew('${b.id}')" class="px-3 py-1.5 rounded-xl bg-beige hover:bg-[#e3d0bc] text-espresso text-xs font-semibold flex items-center gap-1 transition">
+                  <i class="ph-bold ph-users-three"></i> Atur Kru & Shareloc
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateBookingDriveUrl(bookingId, newUrl) {
+      const b = appState.bookings.find(x => x.id === bookingId);
+      if (!b) return;
+      b.driveUrl = newUrl.trim();
+      saveState();
+      showToast('Link Google Drive Disimpan', `Tautan Drive untuk ${b.couple} telah diperbarui.`);
+    }
+
+    function copyClientDriveLink(bookingId) {
+      const b = appState.bookings.find(x => x.id === bookingId);
+      if (!b) return;
+      const msg = `Halo Kak *${b.couple}*, berikut tautan resmi folder Google Drive *${appState.studioProfile.brandName}* untuk dokumentasi acara Kakak:\n📂 ${b.driveUrl}\n\nSilakan pilih kode file foto favorit (contoh: FP_012.JPG) untuk proses editing (estimasi 3–7 hari kerja). Terima kasih! ✨`;
+      copyTextToClipboard(msg, 'Pesan Link Google Drive Disalin!');
+    }
+
+    function renderFullOctoberCalendar() {
+      const grid = document.getElementById('full-calendar-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 3; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'min-h-[76px] rounded-2xl bg-cream/40';
+        grid.appendChild(empty);
+      }
+
+      for (let day = 1; day <= 31; day++) {
+        const matchedBooking = appState.bookings.find(b => Number(b.day) === day);
+        const bookedMeta = appState.bookedOctoberDates.find(d => d.day === day);
+
+        const cell = document.createElement('div');
+        if (matchedBooking) {
+          cell.className = 'min-h-[76px] p-2.5 rounded-2xl bg-terracotta text-white flex flex-col justify-between cursor-pointer shadow hover:bg-terracottaDark transition';
+          cell.onclick = () => {
+            setBookingView('list');
+            filterBookingCategory('Semua');
+          };
+          cell.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-xs font-bold">${day}</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/20 font-semibold">${matchedBooking.category}</span>
+            </div>
+            <div class="text-[11px] font-bold leading-tight truncate mt-1">${matchedBooking.couple}</div>
+          `;
+        } else if (bookedMeta) {
+          cell.className = 'min-h-[76px] p-2.5 rounded-2xl bg-[#D99B78] text-white flex flex-col justify-between cursor-pointer hover:opacity-90 transition';
+          cell.onclick = () => openNewBookingModal(day);
+          cell.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-xs font-bold">${day}</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-black/20">${bookedMeta.cat}</span>
+            </div>
+            <div class="text-[10px] font-medium leading-tight mt-1">Slot Terjadwal</div>
+          `;
+        } else {
+          cell.className = 'min-h-[76px] p-2.5 rounded-2xl bg-cream border border-[#E6D5C3] text-espressoMuted flex flex-col justify-between cursor-pointer hover:bg-beige transition';
+          cell.onclick = () => openNewBookingModal(day);
+          cell.innerHTML = `
+            <span class="font-mono text-xs font-bold text-espresso">${day}</span>
+            <span class="text-[10px] text-sage font-semibold">+ Kosong</span>
+          `;
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    function advanceBookingStage(bookingId, stageNum) {
+      const b = appState.bookings.find(x => x.id === bookingId);
+      if (!b) return;
+      b.stage = stageNum;
+      saveState();
+      renderBookingsList();
+      showToast('Alur Kerja Diperbarui', `Progres ${b.couple} berada di Tahap ${stageNum}/4.`);
+    }
+
+    function jumpToInvoice(bookingId) {
+      appState.selectedInvoiceClientId = bookingId;
+      saveState();
+      renderInvoiceSection();
+      switchTab('invoice');
+    }
+
+    function jumpToCrew(bookingId) {
+      appState.selectedCrewJobId = bookingId;
+      saveState();
+      renderCrewSection();
+      switchTab('crew');
+    }
+
+    // ==================== MENU 3: INVOICE OTOMATIS ====================
+    function renderInvoiceSection() {
+      const select = document.getElementById('invoice-client-select');
+      if (!select) return;
+
+      select.innerHTML = appState.bookings.map(b =>
+        `<option value="${b.id}" ${b.id === appState.selectedInvoiceClientId ? 'selected' : ''}>${b.couple} — ${b.day} ${b.month} (${b.category})</option>`
+      ).join('');
+
+      // Populate Pricelist quick picker inside Invoice
+      const plPicker = document.getElementById('invoice-pricelist-picker');
+      if (plPicker) {
+        plPicker.innerHTML = appState.pricelist.map(p =>
+          `<option value="${p.id}">[${p.category}] ${p.name} — ${formatRupiah(p.price)}</option>`
+        ).join('');
+      }
+
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId) || appState.bookings[0];
+      if (!client) return;
+
+      document.getElementById('invoice-dp-input').value = client.dpPaid;
+
+      // Render Checklist Editor
+      const editor = document.getElementById('invoice-items-editor');
+      editor.innerHTML = client.items.map((item, idx) => `
+        <div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-cream border border-[#DEC9B5]">
+          <label class="flex items-center gap-2.5 text-xs font-semibold text-espresso cursor-pointer flex-1">
+            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleInvoiceItem(${idx})" class="w-4 h-4 accent-[#9E5231] rounded" />
+            <span>${item.name}</span>
+          </label>
+          <input type="number" step="25000" value="${item.price}" oninput="updateInvoiceItemPrice(${idx}, this.value)"
+            class="w-32 px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-right text-espresso" />
+        </div>
+      `).join('');
+
+      // Calculate Live Invoice Preview
+      const activeItems = client.items.filter(i => i.checked);
+      const subtotal = activeItems.reduce((sum, i) => sum + Number(i.price || 0), 0);
+      client.totalPrice = subtotal;
+      const remaining = Math.max(0, subtotal - Number(client.dpPaid || 0));
+
+      document.getElementById('inv-preview-brand').textContent = appState.studioProfile.brandName;
+      document.getElementById('inv-preview-city').textContent = `${appState.studioProfile.city} • WA: ${appState.studioProfile.adminWa}`;
+      document.getElementById('inv-number-display').textContent = `INV/FP/2026/${client.id.split('-').pop()}`;
+      document.getElementById('inv-client-name').textContent = client.couple;
+      document.getElementById('inv-client-date').textContent = `${client.day} ${client.month}`;
+      document.getElementById('inv-client-venue').textContent = client.venue;
+      document.getElementById('inv-client-drive').textContent = client.serviceType;
+
+      const statusBadge = document.getElementById('inv-status-badge');
+      if (remaining === 0) {
+        statusBadge.className = 'px-3 py-1 rounded-full bg-sageLight text-sage text-xs font-bold';
+        statusBadge.textContent = 'LUNAS ✓';
+      } else {
+        statusBadge.className = 'px-3 py-1 rounded-full bg-amberLight text-amberWarn text-xs font-bold';
+        statusBadge.textContent = 'BELUM LUNAS';
+      }
+
+      const previewLines = document.getElementById('inv-preview-lines');
+      previewLines.innerHTML = activeItems.map(i => `
+        <div class="flex justify-between text-xs sm:text-sm">
+          <span class="text-espresso font-medium">${i.name}</span>
+          <span class="font-mono font-semibold text-espresso">${formatRupiah(i.price)}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('inv-subtotal').textContent = formatRupiah(subtotal);
+      document.getElementById('inv-dp-display').textContent = '- ' + formatRupiah(client.dpPaid);
+      document.getElementById('inv-remaining').textContent = formatRupiah(remaining);
+      document.getElementById('inv-bank-display').textContent = appState.studioProfile.bankInfo;
+
+      calculateFinancialSummary();
+      renderBookingsList();
+    }
+
+    function selectInvoiceClient(id) {
+      appState.selectedInvoiceClientId = id;
+      saveState();
+      renderInvoiceSection();
+    }
+
+    function toggleInvoiceItem(idx) {
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      if (!client) return;
+      client.items[idx].checked = !client.items[idx].checked;
+      saveState();
+      renderInvoiceSection();
+    }
+
+    function updateInvoiceItemPrice(idx, val) {
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      if (!client) return;
+      client.items[idx].price = Number(val) || 0;
+      saveState();
+      renderInvoiceSection();
+    }
+
+    function addPricelistToCurrentInvoice() {
+      const picker = document.getElementById('invoice-pricelist-picker');
+      const chosen = appState.pricelist.find(p => p.id === picker.value);
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      if (!chosen || !client) return;
+
+      client.items.push({
+        name: chosen.name,
+        price: chosen.price,
+        checked: true
+      });
+      saveState();
+      renderInvoiceSection();
+      showToast('Paket Dimasukkan ke Invoice', `${chosen.name} (${formatRupiah(chosen.price)}) ditambahkan.`);
+    }
+
+    function addCustomInvoiceItem() {
+      const nameEl = document.getElementById('custom-item-name');
+      const priceEl = document.getElementById('custom-item-price');
+      const name = nameEl.value.trim();
+      const price = Number(priceEl.value) || 0;
+      if (!name || price <= 0) {
+        showToast('Mohon Lengkapi Item', 'Isi nama layanan tambahan dan harganya terlebih dahulu.');
+        return;
+      }
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      client.items.push({ name, price, checked: true });
+      nameEl.value = '';
+      priceEl.value = '';
+      saveState();
+      renderInvoiceSection();
+      showToast('Item Ditambahkan', `${name} (${formatRupiah(price)}) masuk ke invoice.`);
+    }
+
+    function setThirtyPercentDP() {
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      if (!client) return;
+      const dp30 = Math.round((client.totalPrice * 0.3) / 1000) * 1000;
+      client.dpPaid = dp30;
+      saveState();
+      renderInvoiceSection();
+      showToast('DP 30% Diterapkan', `Nominal DP diatur ke ${formatRupiah(dp30)} (30% dari total paket).`);
+    }
+
+    function updateInvoiceDP(val) {
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      if (!client) return;
+      client.dpPaid = Number(val) || 0;
+      saveState();
+      renderInvoiceSection();
+    }
+
+    function updateInvoiceBank(val) {
+      appState.studioProfile.bankInfo = val;
+      saveState();
+      document.getElementById('inv-bank-display').textContent = val;
+    }
+
+    function copyInvoiceWhatsApp() {
+      const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
+      if (!client) return;
+      const remaining = Math.max(0, client.totalPrice - client.dpPaid);
+      const itemsText = client.items.filter(i => i.checked).map(i => `• ${i.name}: ${formatRupiah(i.price)}`).join('\n');
+      const msg = `*INVOICE RESMI — ${appState.studioProfile.brandName}*\nCapture Your Story • ${appState.studioProfile.city}\nNo: INV/FP/2026/${client.id.split('-').pop()}\nKlien: *${client.couple}*\nJadwal: ${client.day} ${client.month} (${client.venue})\n\n*Rincian Paket & Layanan:*\n${itemsText}\n\nTotal Paket: *${formatRupiah(client.totalPrice)}*\nDP Diterima (Min 30%): *${formatRupiah(client.dpPaid)}*\n*Sisa Pelunasan: ${formatRupiah(remaining)}*\n\n📂 Link File Google Drive: ${client.driveUrl}\n• Preview dikirim 1–3 hari, hasil edit 3–7 hari kerja.\n• Pelunasan dilakukan maksimal setelah acara/sesi selesai.\n• Info & Konfirmasi WA: *${appState.studioProfile.adminWa}*\nTerima kasih telah mempercayakan momen berharga Anda bersama ${appState.studioProfile.brandName} 🙏✨`;
+      copyTextToClipboard(msg, 'Invoice & Ketentuan Resmi Disalin ke WhatsApp!');
+    }
+
+    // ==================== MENU 4: JADWAL KRU, FEE TIM & SHARELOC ====================
+    function renderCrewSection() {
+      const select = document.getElementById('crew-job-select');
+      if (!select) return;
+
+      select.innerHTML = appState.bookings.map(b =>
+        `<option value="${b.id}" ${b.id === appState.selectedCrewJobId ? 'selected' : ''}>${b.couple} (${b.day} ${b.month})</option>`
+      ).join('');
+
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId) || appState.bookings[0];
+      if (!job) return;
+
+      document.getElementById('crew-panel-title').textContent = `Tim Liputan • ${job.couple} (${job.day} ${job.month})`;
+      document.getElementById('crew-venue-input').value = job.venue;
+      document.getElementById('crew-time-input').value = job.gatherTime;
+      document.getElementById('crew-card-input').value = job.memoryCardCode || 'Card #A1';
+
+      const emptyCount = job.crew.filter(c => c.assignee === 'Kosong').length;
+      const badge = document.getElementById('crew-shortage-badge');
+      if (emptyCount > 0) {
+        badge.className = 'px-3 py-1 rounded-full bg-dangerLight text-danger text-xs font-bold flex items-center gap-1';
+        badge.innerHTML = `<i class="ph-fill ph-warning-circle"></i> Kekurangan Tim (${emptyCount} Kosong)`;
+      } else {
+        badge.className = 'px-3 py-1 rounded-full bg-sageLight text-sage text-xs font-bold flex items-center gap-1';
+        badge.innerHTML = `<i class="ph-fill ph-check-circle"></i> Tim Lengkap`;
+      }
+
+      // Options built dynamically from crewMaster
+      const masterNames = ['Kosong', ...appState.crewMaster.map(cm => cm.name)];
+
+      const list = document.getElementById('crew-roles-list');
+      list.innerHTML = job.crew.map((c, idx) => {
+        const isEmpty = c.assignee === 'Kosong';
+        return `
+          <div class="p-3.5 rounded-2xl border ${isEmpty ? 'bg-dangerLight/40 border-danger' : 'bg-cream border-[#DEC9B5]'} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl ${isEmpty ? 'bg-danger text-white' : 'bg-terracotta text-white'} flex items-center justify-center font-bold text-xs">
+                ${isEmpty ? '?' : c.assignee.charAt(0)}
+              </div>
+              <div>
+                <p class="text-xs font-bold text-espresso">${c.role}</p>
+                <p class="text-[11px] ${isEmpty ? 'text-danger font-semibold' : 'text-espressoMuted'}">
+                  ${isEmpty ? 'Belum ada kru ditugaskan!' : 'Personel: ' + c.assignee}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <select onchange="assignCrewMember(${idx}, this.value)" class="px-3 py-1.5 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold text-espresso">
+                ${masterNames.map(opt => `<option value="${opt}" ${opt === c.assignee ? 'selected' : ''}>${opt}</option>`).join('')}
+              </select>
+              <input type="number" step="25000" value="${c.fee}" oninput="updateCrewFee(${idx}, this.value)"
+                class="w-28 px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-right text-espresso" />
+              <button onclick="removeCrewRoleFromJob(${idx})" class="p-1.5 rounded-lg text-espressoMuted hover:text-danger" title="Hapus posisi ini">
+                <i class="ph-bold ph-x"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const totalFee = job.crew.reduce((acc, c) => acc + Number(c.fee || 0), 0);
+      const netProfit = Math.max(0, job.totalPrice - totalFee);
+      document.getElementById('crew-total-fee').textContent = formatRupiah(totalFee);
+      document.getElementById('crew-net-profit').textContent = formatRupiah(netProfit);
+
+      updateSharelocPreviewText(job);
+      calculateFinancialSummary();
+    }
+
+    function selectCrewJob(id) {
+      appState.selectedCrewJobId = id;
+      saveState();
+      renderCrewSection();
+    }
+
+    function assignCrewMember(roleIdx, personName) {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.crew[roleIdx].assignee = personName;
+
+      // Auto-fill fee from Master Crew if found
+      const foundMaster = appState.crewMaster.find(cm => cm.name === personName);
+      if (foundMaster && foundMaster.defaultFee >= 0) {
+        job.crew[roleIdx].fee = foundMaster.defaultFee;
+      }
+
+      saveState();
+      renderCrewSection();
+      showToast('Kru Ditugaskan', `${personName} bertugas sebagai ${job.crew[roleIdx].role}.`);
+    }
+
+    function updateCrewFee(roleIdx, val) {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.crew[roleIdx].fee = Number(val) || 0;
+      saveState();
+      renderCrewSection();
+    }
+
+    function addExtraRoleToCurrentJob() {
+      const input = document.getElementById('job-extra-role-input');
+      const roleName = input.value.trim();
+      if (!roleName) {
+        showToast('Nama Posisi Kosong', 'Ketik posisi kru yang ingin ditambahkan.');
+        return;
+      }
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.crew.push({
+        role: roleName,
+        assignee: 'Kosong',
+        fee: 300000
+      });
+      input.value = '';
+      saveState();
+      renderCrewSection();
+    }
+
+    function removeCrewRoleFromJob(idx) {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.crew.splice(idx, 1);
+      saveState();
+      renderCrewSection();
+    }
+
+    function updateCrewVenue(val) {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.venue = val;
+      saveState();
+      updateSharelocPreviewText(job);
+    }
+
+    function updateCrewTime(val) {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.gatherTime = val;
+      saveState();
+      updateSharelocPreviewText(job);
+    }
+
+    function updateCrewCardCode(val) {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      job.memoryCardCode = val;
+      saveState();
+      updateSharelocPreviewText(job);
+      renderBookingsList();
+    }
+
+    function updateSharelocPreviewText(job) {
+      const crewLines = job.crew.map(c => `• ${c.role}: ${c.assignee}`).join('\n');
+      const text = `📍 *Lokasi:* ${job.venue}\n⏰ *Standby:* ${job.gatherTime} (${job.day} ${job.month})\n📦 *Paket:* ${job.serviceType}\n💾 *Media:* ${job.memoryCardCode || 'Card #A1'}\n🔗 *Maps:* ${job.mapsUrl}\n\n*Tim Bertugas:*\n${crewLines}`;
+      document.getElementById('shareloc-preview-text').textContent = text;
+    }
+
+    function sendSharelocToAllCrew() {
+      const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
+      if (!job) return;
+      const crewLines = job.crew.map(c => `• ${c.role}: *${c.assignee}* (Fee: ${formatRupiah(c.fee)})`).join('\n');
+      const msg = `*BRIEFING & SHARELOC KRU — ${appState.studioProfile.brandName}*\nKlien: *${job.couple}* (${job.category})\nPaket: ${job.serviceType}\nTanggal: ${job.day} ${job.month}\nJam Kumpul: *${job.gatherTime}*\nLokasi Venue: *${job.venue}*\nGoogle Maps: ${job.mapsUrl}\nMemory Card: *${job.memoryCardCode || 'Card #A1'}*\n\n*Formasi Tim & Fee:*\n${crewLines}\n\nPastikan baterai kamera full & seluruh file langsung di-backup ke Google Drive / PC Studio setelah liputan selesai ya tim! 📸🔥`;
+      copyTextToClipboard(msg, 'Shareloc & Briefing Kru Disalin ke Clipboard!');
+    }
+
+    // ==================== MENU 5: GEAR & MEMORY CARD TRACKER ====================
+    function renderGearSection() {
+      const mcGrid = document.getElementById('memory-card-grid');
+      if (mcGrid) {
+        mcGrid.innerHTML = appState.memoryCards.map((mc, idx) => {
+          let badgeClass = 'bg-sageLight text-sage';
+          if (mc.status.includes('Belum Backup')) badgeClass = 'bg-dangerLight text-danger';
+          else if (mc.status.includes('Sudah Backup')) badgeClass = 'bg-driveLight text-driveBlue';
+
+          return `
+            <div onclick="cycleMemoryCardStatus(${idx})" class="cursor-pointer bg-cream rounded-2xl border border-[#DEC9B5] p-4 hover:border-terracotta transition space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-xs font-bold text-espresso flex items-center gap-1.5">
+                  <i class="ph-fill ph-memory text-terracotta text-base"></i> ${mc.code}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">${mc.status}</span>
+              </div>
+              <p class="text-xs font-bold text-espresso">${mc.jobName}</p>
+              <p class="text-[11px] text-espressoMuted font-mono"><i class="ph-fill ph-hard-drives"></i> ${mc.hddLocation}</p>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const grid = document.getElementById('gear-grid');
+      if (!grid) return;
+
+      grid.innerHTML = appState.gearList.map((g, idx) => {
+        let badgeStyle = 'bg-sageLight text-sage';
+        if (g.status === 'Dibawa Liputan') badgeStyle = 'bg-amberLight text-amberWarn';
+        if (g.status === 'Perlu Cek') badgeStyle = 'bg-dangerLight text-danger';
+
+        return `
+          <div onclick="cycleGearStatus(${idx})" class="cursor-pointer bg-white rounded-3xl border border-[#E6D5C3] p-5 shadow-warm hover:border-terracotta transition flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-beige text-terracotta flex items-center justify-center shrink-0">
+                <i class="ph-fill ${g.icon || 'ph-camera'} text-2xl"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm text-espresso">${g.name}</h4>
+                <p class="text-xs text-espressoMuted mt-0.5">Lokasi: <strong>${g.holder}</strong></p>
+                <span class="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${badgeStyle}">
+                  ${g.status}
+                </span>
+              </div>
+            </div>
+            <i class="ph-bold ph-arrows-clockwise text-espressoMuted text-sm mt-1" title="Klik untuk ubah status"></i>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function cycleMemoryCardStatus(idx) {
+      const order = [
+        'Belum Backup - JANGAN FORMAT!',
+        'Sudah Backup ke HDD FILEPHOTOKU.STD',
+        'Aman - Siap Format Ulang'
+      ];
+      const current = appState.memoryCards[idx].status;
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      appState.memoryCards[idx].status = next;
+      saveState();
+      renderGearSection();
+      showToast('Status Memory Card Diubah', `${appState.memoryCards[idx].code}: ${next}`);
+    }
+
+    function cycleGearStatus(idx) {
+      const order = ['Tersedia di Studio', 'Dibawa Liputan', 'Perlu Cek'];
+      const current = appState.gearList[idx].status;
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      appState.gearList[idx].status = next;
+      saveState();
+      renderGearSection();
+      showToast('Status Alat Diperbarui', `${appState.gearList[idx].name} → ${next}`);
+    }
+
+    function returnAllGear() {
+      appState.gearList.forEach(g => {
+        g.status = 'Tersedia di Studio';
+        g.holder = 'Drybox Studio FILEPHOTOKU.STD';
+      });
+      saveState();
+      renderGearSection();
+      showToast('Semua Gear Kembali Aman!', 'Seluruh alat telah ditandai tersedia di Studio.');
+    }
+
+    // ==================== MENU 6: PORTAL SORTIR FOTO (FP_xxx.JPG) ====================
+    function renderPhotoSortSection() {
+      const selectedPhotos = appState.photos.filter(p => p.selected);
+      document.getElementById('selected-photo-count').textContent = selectedPhotos.length;
+      document.getElementById('selected-photo-pills').textContent =
+        selectedPhotos.length > 0 ? selectedPhotos.map(p => p.code).join(', ') : 'Belum ada file dipilih';
+
+      const list = appState.photoSortFilter === 'selected'
+        ? selectedPhotos
+        : appState.photos;
+
+      const grid = document.getElementById('photo-sort-grid');
+      if (!grid) return;
+
+      grid.innerHTML = list.map(p => `
+        <div class="rounded-2xl overflow-hidden border-2 ${p.selected ? 'border-terracotta bg-[#FDF8F3]' : 'border-[#E6D5C3] bg-white'} shadow-sm transition flex flex-col justify-between">
+          <div onclick="togglePhotoSelection('${p.code}')" class="relative h-44 bg-beige overflow-hidden cursor-pointer group">
+            <img src="${p.img}" alt="${p.title}" onerror="this.src='https://placehold.co/500x360/EFE2D3/2B1B12?text=${p.code}'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+            <span class="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/75 text-white font-mono text-xs font-bold">
+              ${p.code}
+            </span>
+            <span class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full ${p.selected ? 'bg-terracotta text-white' : 'bg-white/80 text-espresso'} flex items-center justify-center shadow">
+              <i class="ph-fill ph-heart text-base"></i>
+            </span>
+          </div>
+          <div class="p-3.5 space-y-2">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-bold text-espresso truncate">${p.title}</p>
+              <span class="text-[10px] font-bold ${p.selected ? 'text-terracotta' : 'text-espressoMuted'}">
+                ${p.selected ? '✓ Masuk Edit' : 'Klik Pilih'}
+              </span>
+            </div>
+            <input type="text" value="${p.note || ''}" onchange="updatePhotoNote('${p.code}', this.value)"
+              placeholder="Catatan edit / ukuran cetak..."
+              class="w-full px-2.5 py-1.5 rounded-lg bg-cream border border-[#DEC9B5] text-[11px] text-espresso focus:outline-none" />
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function togglePhotoSelection(code) {
+      const photo = appState.photos.find(p => p.code === code);
+      if (!photo) return;
+      photo.selected = !photo.selected;
+      saveState();
+      renderPhotoSortSection();
+    }
+
+    function updatePhotoNote(code, noteVal) {
+      const photo = appState.photos.find(p => p.code === code);
+      if (!photo) return;
+      photo.note = noteVal;
+      saveState();
+      showToast('Catatan Edit Disimpan', `Catatan pada ${code} diperbarui.`);
+    }
+
+    function setPhotoSortFilter(mode) {
+      appState.photoSortFilter = mode;
+      saveState();
+      document.getElementById('filter-photo-all').className =
+        mode === 'all' ? 'px-3.5 py-2 rounded-xl bg-espresso text-white text-xs font-semibold transition' : 'px-3.5 py-2 rounded-xl bg-beige text-espresso text-xs font-semibold transition';
+      document.getElementById('filter-photo-selected').className =
+        mode === 'selected' ? 'px-3.5 py-2 rounded-xl bg-espresso text-white text-xs font-semibold transition' : 'px-3.5 py-2 rounded-xl bg-beige text-espresso text-xs font-semibold transition';
+      renderPhotoSortSection();
+    }
+
+    function copySelectedPhotoCodes() {
+      const selected = appState.photos.filter(p => p.selected);
+      const codesOnly = selected.map(p => p.code).join(', ');
+      const notesList = selected.map(p => `• ${p.code} (${p.title}) — Note: ${p.note || '-'}`).join('\n');
+      const msg = `*DAFTAR KODE FILE PILIHAN KLIEN — ${appState.studioProfile.brandName}*\nFilter Lightroom: ${codesOnly}\n\n*Detail Catatan Edit & Cetak:*\n${notesList}`;
+      copyTextToClipboard(msg, 'Kode File Kamera Disalin untuk Lightroom!');
+    }
+
+    // ==================== MENU 7: WEBSITE BOOKING & VENDOR BUNDLING ====================
+    function renderWebsiteAndVendors() {
+      // Update Mockup Branding
+      const prof = appState.studioProfile;
+      const mCity = document.getElementById('pub-mockup-city');
+      if (mCity) mCity.textContent = `⭐ 4.9 • ${prof.city}`;
+      const mTag = document.getElementById('pub-mockup-tagline');
+      if (mTag) mTag.textContent = prof.tagline;
+
+      // Render Public Service Buttons dynamically
+      const mainServices = appState.serviceCategories.filter(c => !c.startsWith('Add-On'));
+      const btnContainer = document.getElementById('pub-service-buttons');
+      if (btnContainer) {
+        btnContainer.innerHTML = mainServices.slice(0, 4).map(srv => {
+          const active = appState.selectedPublicService === srv;
+          return `
+            <button onclick="selectPublicService('${srv}', this)"
+              class="pub-srv-btn p-2.5 rounded-xl border-2 ${active ? 'border-terracotta bg-cream text-espresso font-bold' : 'border-[#E6D5C3] text-espressoMuted font-semibold'} text-left truncate">
+              📸 ${srv}
+            </button>
+          `;
+        }).join('');
+      }
+
+      // Render Public Package Dropdown filtered by selected service
+      const pkgSelect = document.getElementById('pub-package-select');
+      if (pkgSelect) {
+        const matchingPkgs = appState.pricelist.filter(p => p.category === appState.selectedPublicService);
+        const listToShow = matchingPkgs.length > 0 ? matchingPkgs : appState.pricelist;
+        pkgSelect.innerHTML = listToShow.map(p =>
+          `<option value="${p.id}">${p.name} — ${formatRupiah(p.price)}</option>`
+        ).join('');
+      }
+
+      // Render Vendor Ecosystem
+      const container = document.getElementById('vendor-ecosystem-list');
+      if (!container) return;
+
+      container.innerHTML = appState.vendors.map((v, idx) => `
+        <label class="cursor-pointer p-4 rounded-2xl border-2 ${v.checkedInBundle ? 'border-terracotta bg-cream' : 'border-[#E6D5C3] bg-white'} flex items-start justify-between gap-3 transition">
+          <div class="flex items-start gap-3">
+            <input type="checkbox" ${v.checkedInBundle ? 'checked' : ''} onchange="toggleVendorBundle(${idx})" class="mt-1 w-4 h-4 accent-[#9E5231] rounded" />
+            <div>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-beige text-terracotta">${v.role}</span>
+              <h4 class="font-bold text-sm text-espresso mt-1">${v.name}</h4>
+              <p class="text-[11px] text-espressoMuted">⭐ ${v.rating} • ${v.city}</p>
+            </div>
+          </div>
+          <span class="font-mono text-xs font-bold text-espresso shrink-0">${formatRupiah(v.fee)}</span>
+        </label>
+      `).join('');
+
+      const activeVendors = appState.vendors.filter(v => v.checkedInBundle);
+      const bundleSum = activeVendors.reduce((acc, v) => acc + Number(v.fee || 0), 0);
+      document.getElementById('bundle-total-price').textContent = formatRupiah(bundleSum);
+      document.getElementById('bundle-selected-count').textContent = `${activeVendors.length} Layanan Tergabung`;
+    }
+
+    function selectPublicService(srvName) {
+      appState.selectedPublicService = srvName;
+      saveState();
+      renderWebsiteAndVendors();
+    }
+
+    function submitPublicBooking() {
+      const name = document.getElementById('pub-client-name').value.trim();
+      const day = Number(document.getElementById('pub-client-day').value) || 28;
+      const venue = document.getElementById('pub-client-venue').value.trim() || 'Banyuwangi';
+      const pkgId = document.getElementById('pub-package-select').value;
+      const chosenPkg = appState.pricelist.find(p => p.id === pkgId) || appState.pricelist[0];
+
+      if (!name) {
+        showToast('Nama Klien Kosong', 'Silakan isi nama pasangan/wisudawan pada simulasi booking online.');
+        return;
+      }
+
+      const price = chosenPkg ? chosenPkg.price : 1490000;
+      const dp30 = Math.round((price * 0.3) / 1000) * 1000;
+      const pkgName = chosenPkg ? chosenPkg.name : appState.selectedPublicService;
+
+      const newId = `FP-JOB-0${appState.bookings.length + 1}`;
+      const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      appState.bookings.unshift({
+        id: newId,
+        couple: name,
+        day: Math.min(31, Math.max(1, day)),
+        month: 'Okt 2026',
+        dueDate: `${day} Okt 2026 (Selesai Acara)`,
+        category: appState.selectedPublicService,
+        serviceType: pkgName,
+        venue: venue,
+        mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(venue),
+        gatherTime: '07.00 WIB',
+        driveUrl: `https://drive.google.com/drive/folders/filephotoku-${slug}`,
+        stage: 1,
+        fileStage: 1,
+        memoryCardCode: 'Card #A1',
+        totalPrice: price,
+        dpPaid: dp30,
+        isOverdue: false,
+        items: [
+          { name: pkgName, price: price, checked: true }
+        ],
+        crew: [
+          { role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }
+        ]
+      });
+
+      if (!appState.bookedOctoberDates.some(d => d.day === day)) {
+        appState.bookedOctoberDates.push({ day, cat: appState.selectedPublicService });
+      }
+
+      document.getElementById('pub-client-name').value = '';
+      document.getElementById('pub-client-day').value = '';
+      document.getElementById('pub-client-venue').value = '';
+
+      saveState();
+      renderAll();
+      switchTab('booking');
+      showToast('Booking Online Masuk!', `${name} (${pkgName}) otomatis tercatat dengan DP 30% (${formatRupiah(dp30)}).`);
+    }
+
+    function toggleVendorBundle(idx) {
+      appState.vendors[idx].checkedInBundle = !appState.vendors[idx].checkedInBundle;
+      saveState();
+      renderWebsiteAndVendors();
+    }
+
+    function copyBundleProposal() {
+      const selected = appState.vendors.filter(v => v.checkedInBundle);
+      const total = selected.reduce((acc, v) => acc + v.fee, 0);
+      const list = selected.map(v => `• ${v.role} (${v.name}): ${formatRupiah(v.fee)}`).join('\n');
+      const msg = `*PENAWARAN PAKET BUNDLING — ${appState.studioProfile.brandName}*\n\n${list}\n\n*Total Estimasi Paket: ${formatRupiah(total)}*\nDP Minimal 30%: ${formatRupiah(Math.round((total * 0.3) / 1000) * 1000)}\nHubungi Admin WA: ${appState.studioProfile.adminWa} (${appState.studioProfile.city}) ✨`;
+      copyTextToClipboard(msg, 'Proposal Paket Bundling Disalin!');
+    }
+
+    // ==================== GLOBAL INSTANT SEARCH ====================
+    function handleGlobalSearch(query) {
+      const box = document.getElementById('global-search-results');
+      const q = (query || '').trim().toLowerCase();
+      if (!q) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      const matchedBookings = appState.bookings.filter(b =>
+        b.couple.toLowerCase().includes(q) ||
+        b.venue.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q) ||
+        b.serviceType.toLowerCase().includes(q) ||
+        String(b.day).includes(q)
+      );
+
+      const matchedPackages = appState.pricelist.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        (p.desc || '').toLowerCase().includes(q)
+      );
+
+      if (matchedBookings.length === 0 && matchedPackages.length === 0) {
+        box.innerHTML = `<p class="text-xs text-espressoMuted p-2">Tidak ditemukan klien atau paket untuk kata kunci "<strong>${query}</strong>".</p>`;
+        box.classList.remove('hidden');
+        return;
+      }
+
+      let html = '';
+      if (matchedBookings.length > 0) {
+        html += `<p class="text-[10px] font-bold uppercase text-terracotta px-2 mb-1">Jadwal Klien</p>`;
+        html += matchedBookings.map(b => {
+          const rem = Math.max(0, b.totalPrice - b.dpPaid);
+          return `
+            <div onclick="selectSearchResult('${b.id}')" class="p-3 rounded-xl hover:bg-cream cursor-pointer flex items-center justify-between gap-2 border-b border-[#F2E6D8] last:border-none">
+              <div>
+                <p class="text-xs font-bold text-espresso">${b.couple} <span class="text-terracotta">(${b.day} ${b.month})</span></p>
+                <p class="text-[11px] text-espressoMuted">📍 ${b.venue} • ${b.serviceType}</p>
+              </div>
+              <span class="font-mono text-xs font-bold ${rem === 0 ? 'text-sage' : 'text-danger'}">
+                ${rem === 0 ? 'LUNAS' : 'Sisa ' + formatRupiah(rem)}
+              </span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (matchedPackages.length > 0) {
+        html += `<p class="text-[10px] font-bold uppercase text-driveBlue px-2 mt-2 mb-1">Pricelist FILEPHOTOKU.STD</p>`;
+        html += matchedPackages.slice(0, 5).map(p => `
+          <div onclick="switchTab('setup'); document.getElementById('global-search-results').classList.add('hidden');" class="p-2.5 rounded-xl hover:bg-cream cursor-pointer flex items-center justify-between gap-2">
+            <div>
+              <p class="text-xs font-bold text-espresso">[${p.category}] ${p.name}</p>
+              <p class="text-[10px] text-espressoMuted truncate max-w-xs">${p.desc || ''}</p>
+            </div>
+            <span class="font-mono text-xs font-bold text-terracotta">${formatRupiah(p.price)}</span>
+          </div>
+        `).join('');
+      }
+
+      box.innerHTML = html;
+      box.classList.remove('hidden');
+    }
+
+    function quickSearchDemo() {
+      const input = document.getElementById('global-search');
+      input.value = 'Magazine Book';
+      handleGlobalSearch('Magazine Book');
+    }
+
+    function selectSearchResult(bookingId) {
+      document.getElementById('global-search-results').classList.add('hidden');
+      document.getElementById('global-search').value = '';
+      jumpToInvoice(bookingId);
+    }
+
+    // ==================== MODALS (NEW BOOKING, GUIDE, RESET) ====================
+    function openNewBookingModal(prefillDay = 28) {
+      document.getElementById('modal-day-input').value = prefillDay;
+
+      // Populate Category Select
+      const catSel = document.getElementById('modal-category-input');
+      const mainCats = appState.serviceCategories.filter(c => !c.startsWith('Add-On'));
+      catSel.innerHTML = mainCats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+      filterModalPackagesByCategory();
+      document.getElementById('modal-new-booking').classList.remove('hidden');
+    }
+
+    function filterModalPackagesByCategory() {
+      const chosenCat = document.getElementById('modal-category-input').value;
+      const pkgSel = document.getElementById('modal-package-select');
+      const filtered = appState.pricelist.filter(p => p.category === chosenCat);
+      const list = filtered.length > 0 ? filtered : appState.pricelist;
+
+      pkgSel.innerHTML = list.map(p => `<option value="${p.id}">${p.name} — ${formatRupiah(p.price)}</option>`).join('');
+      applySelectedPackageToModal();
+    }
+
+    function applySelectedPackageToModal() {
+      const pkgId = document.getElementById('modal-package-select').value;
+      const found = appState.pricelist.find(p => p.id === pkgId);
+      if (found) {
+        document.getElementById('modal-price-input').value = found.price;
+        // Otomatis hitung DP minimal 30% sesuai ketentuan FILEPHOTOKU.STD
+        document.getElementById('modal-dp-input').value = Math.round((found.price * 0.3) / 1000) * 1000;
+      }
+    }
+
+    function autoCalcModalDP() {
+      const price = Number(document.getElementById('modal-price-input').value) || 0;
+      document.getElementById('modal-dp-input').value = Math.round((price * 0.3) / 1000) * 1000;
+    }
+
+    function closeNewBookingModal() {
+      document.getElementById('modal-new-booking').classList.add('hidden');
+    }
+
+    function saveNewBooking() {
+      const couple = document.getElementById('modal-couple-input').value.trim();
+      const day = Number(document.getElementById('modal-day-input').value) || 28;
+      const category = document.getElementById('modal-category-input').value;
+      const pkgId = document.getElementById('modal-package-select').value;
+      const chosenPkg = appState.pricelist.find(p => p.id === pkgId);
+      const serviceName = chosenPkg ? chosenPkg.name : category;
+
+      const venue = document.getElementById('modal-venue-input').value.trim() || 'Banyuwangi';
+      const driveInput = document.getElementById('modal-drive-input').value.trim();
+      const price = Number(document.getElementById('modal-price-input').value) || 1490000;
+      const dp = Number(document.getElementById('modal-dp-input').value) || 450000;
+
+      if (!couple) {
+        showToast('Nama Klien Belum Diisi', 'Masukkan nama klien atau pasangan terlebih dahulu.');
+        return;
+      }
+
+      const newId = `FP-JOB-0${appState.bookings.length + 1}`;
+      const slug = couple.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      appState.bookings.unshift({
+        id: newId,
+        couple,
+        day: Math.min(31, Math.max(1, day)),
+        month: 'Okt 2026',
+        dueDate: `${day} Okt 2026 (Selesai Acara)`,
+        category,
+        serviceType: serviceName,
+        venue,
+        mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(venue),
+        gatherTime: '06.30 WIB',
+        driveUrl: driveInput || `https://drive.google.com/drive/folders/filephotoku-${slug}`,
+        stage: 1,
+        fileStage: 1,
+        memoryCardCode: 'Card #A1',
+        totalPrice: price,
+        dpPaid: dp,
+        isOverdue: false,
+        items: [
+          { name: serviceName, price: price, checked: true }
+        ],
+        crew: [
+          { role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }
+        ]
+      });
+
+      if (!appState.bookedOctoberDates.some(d => d.day === day)) {
+        appState.bookedOctoberDates.push({ day, cat: category });
+      }
+
+      document.getElementById('modal-couple-input').value = '';
+      document.getElementById('modal-venue-input').value = '';
+      document.getElementById('modal-drive-input').value = '';
+      closeNewBookingModal();
+
+      saveState();
+      renderAll();
+      switchTab('booking');
+      showToast('Booking Baru Tersimpan!', `${couple} (${serviceName}) berhasil masuk ke sistem ${appState.studioProfile.brandName}.`);
+    }
+
+    function openGuideModal() {
+      document.getElementById('modal-guide').classList.remove('hidden');
+    }
+    function closeGuideModal() {
+      document.getElementById('modal-guide').classList.add('hidden');
+    }
+
+    function openResetModal() {
+      document.getElementById('modal-reset').classList.remove('hidden');
+    }
+    function closeResetModal() {
+      document.getElementById('modal-reset').classList.add('hidden');
+    }
+    function confirmResetAllData() {
+      localStorage.removeItem(STORAGE_KEY);
+      appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      closeResetModal();
+      renderAll();
+      switchTab('setup');
+      showToast('Data Direset!', 'Seluruh Pricelist dikembalikan ke sesuai 3 PDF Pricing Guide FILEPHOTOKU.STD.');
+    }
+
+    document.addEventListener('click', (e) => {
+      const searchBox = document.getElementById('global-search-results');
+      const searchInput = document.getElementById('global-search');
+      if (searchBox && !searchBox.contains(e.target) && e.target !== searchInput) {
+        searchBox.classList.add('hidden');
+      }
+    });
+
+    function renderAll() {
+      renderSetupMaster();
+      calculateFinancialSummary();
+      renderDashboardFileTracker();
+      renderMiniOctoberCalendar();
+      renderBookingCategoryChips();
+      renderBookingsList();
+      renderFullOctoberCalendar();
+      renderInvoiceSection();
+      renderCrewSection();
+      renderGearSection();
+      renderPhotoSortSection();
+      renderWebsiteAndVendors();
+    }
+
+    window.onload = function () {
+      renderAll();
+      switchTab(appState.activeTab || 'setup');
+      switchSetupSubTab(appState.setupSubTab || 'pricelist');
+      setBookingView(appState.bookingView || 'list');
+    };
+  </script>
+</body>
+</html>
