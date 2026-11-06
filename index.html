@@ -184,21 +184,27 @@
             </div>
           </div>
         </div>
-        <div class="flex items-center justify-between px-1 mt-2">
-          <span class="text-[11px] font-bold text-espresso" id="sidebar-brand-title">FILEPHOTOKU.STD</span>
-          <span class="text-[10px] font-semibold text-espressoMuted" id="sidebar-brand-city">Banyuwangi</span>
-        </div>
-      </div>
+        <!-- Contoh perbaikan baris tombol atas agar rapi dan tidak berantakan di HP -->
+<div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-stone-900 text-white rounded-xl shadow-md">
+    <!-- Logo atau Nama Brand -->
+    <div class="flex items-center gap-2">
+        <span class="text-orange-500 font-bold text-lg">✳</span>
+        <span class="font-bold tracking-wider text-sm sm:text-base">FILEPHOTOKU.STD</span>
+    </div>
 
-      <!-- Navigation Links -->
-      <div class="px-3.5 pt-3 pb-2 overflow-y-auto max-h-[calc(100vh-240px)]">
-        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-terracotta mb-1.5">Kustomisasi Data Studio</p>
-        <div class="mb-3">
-          <button onclick="switchTab('setup')" data-tab="setup" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-terracotta text-white shadow-sm transition">
-            <span class="flex items-center gap-2.5"><i class="ph-fill ph-sliders-horizontal text-lg"></i> ⚙️ Atur Data Studio</span>
-            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">Master</span>
-          </button>
-        </div>
+    <!-- Kumpulan Tombol Navigasi Atas (Atur PL, Booking, Invoice) -->
+    <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
+        <button onclick="switchTab('atur-pl')" class="px-3 py-1.5 text-xs sm:text-sm font-medium bg-stone-800 hover:bg-orange-600 rounded-lg transition whitespace-nowrap">
+            ⚙️ Atur PL
+        </button>
+        <button onclick="switchTab('booking')" class="px-3 py-1.5 text-xs sm:text-sm font-medium bg-stone-800 hover:bg-orange-600 rounded-lg transition whitespace-nowrap">
+            📅 Booking
+        </button>
+        <button onclick="switchTab('invoice')" class="px-3 py-1.5 text-xs sm:text-sm font-medium bg-stone-800 hover:bg-orange-600 rounded-lg transition whitespace-nowrap">
+            📄 Invoice
+        </button>
+    </div>
+</div>
 
         <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-espressoMuted mb-1.5">Operasional FILEPHOTOKU.STD</p>
         <nav class="space-y-1" id="desktop-nav">
