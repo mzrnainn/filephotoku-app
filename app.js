@@ -1237,6 +1237,9 @@ function renderAll() {
 
 window.onload = function () {
   renderAll();
+  syncFromCloud();
+  setInterval(syncFromCloud, 15000);
+  // Otomatis tarik booking terbaru dari Cloud saat dibuka!
   // Jika Owner sudah pernah login di iPhone ini, langsung buka Dashboard Admin.
   // Jika Konsumen yang membuka link, langsung tampilkan Katalog & Booking tanpa pop-up login!
   if (appState.isUnlocked) {
