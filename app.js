@@ -1237,11 +1237,11 @@ function renderAll() {
 
 window.onload = function () {
   renderAll();
-  syncFromCloud();
+  syncFromCloud(); // Otomatis tarik booking terbaru dari Cloud saat dibuka!
+
+  // Cek pembaruan data dari Cloud setiap 15 detik secara otomatis
   setInterval(syncFromCloud, 15000);
-  // Otomatis tarik booking terbaru dari Cloud saat dibuka!
-  // Jika Owner sudah pernah login di iPhone ini, langsung buka Dashboard Admin.
-  // Jika Konsumen yang membuka link, langsung tampilkan Katalog & Booking tanpa pop-up login!
+
   if (appState.isUnlocked) {
     document.body.classList.remove('public-client-mode');
     switchTab(appState.activeTab || 'dashboard');
