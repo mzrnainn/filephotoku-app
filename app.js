@@ -1,3 +1,4 @@
+const CLOUD_DB_URL = 'https://filephotoku-db-default-rtdb.asia-southeast1.firebasedatabase.app/'
 let appState = loadState();
 let logoTapCount = 0;
 let logoTapTimer = null;
