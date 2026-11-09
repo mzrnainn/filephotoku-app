@@ -1,0 +1,81 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: #FAF3EB;
+  color: #2B1B12;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF3EB;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5C1AE;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9E5231;
+}
+
+.tab-section, .setup-subpanel {
+  display: none;
+  animation: fadeIn 0.2s ease-out;
+}
+.tab-section.active, .setup-subpanel.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sembunyikan seluruh navigasi & tombol Admin saat dibuka oleh konsumen */
+body.public-client-mode .admin-only-ui {
+  display: none !important;
+}
+body:not(.public-client-mode) .public-only-ui {
+  display: none !important;
+}
+
+/* Pengunci Kartu & Input di Layar HP agar Tidak Melebar Keluar Layar */
+.crew-card-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .crew-card-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #invoice-print-area, #invoice-print-area * {
+    visibility: visible;
+  }
+  #invoice-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+}
