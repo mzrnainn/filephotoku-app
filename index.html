@@ -696,18 +696,20 @@
     // Pantau setiap 1 detik agar tidak kembali kosong setelah sinkronisasi server
     setInterval(pastikanHalamanKlienMuncul, 1000);
   </script>
+ <!-- =====================================================================
+       MODUL FINAL: DESAIN SEIMBANG, QRIS ANTI-KEDIP, UPLOAD BUKTI & SYNC ADMIN
+       ===================================================================== -->
   <style>
     body.public-client-mode #tab-website {
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
     }
-  </style>
-  <style>
-    body.public-client-mode #tab-website {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
+
+    /* Perbaiki bagian atas kartu paket yang terpotong */
+    #public-catalog-cards > div {
+      padding-top: 1.15rem !important;
+      overflow: visible !important;
     }
   </style>
 
@@ -723,8 +725,11 @@
       fileQris: 'qris.jpg'
     };
 
-    // 1. Pastikan halaman klien tidak pernah kosong saat dibuka/refresh
-    function pastikanHalamanKlienAktif() {
+    let buktiBayarBase64 = '';
+    let sedangSinkronCloud = false;
+
+    // 1. Penjaga Halaman Klien (TANPA merender ulang QRIS agar tidak kedip-kedip)
+    function jagaTampilanKlien() {
       if (document.body.classList.contains('public-client-mode')) {
         const webTab = document.getElementById('tab-website');
         if (webTab && webTab.offsetHeight < 50) {
@@ -737,74 +742,199 @@
           webTab.style.display = 'block';
         }
       }
-      pasangFormPembayaranKlien();
+      // Hanya pasang kerangka 1 kali jika belum ada di layar
+      if (!document.getElementById('pub-payment-box')) {
+        pasangFormPembayaranKlien();
+      }
+      if (!document.getElementById('pub-studio-info-filler')) {
+        pasangPanelPengisiKolomKiri();
+      }
     }
 
-    // 2. Pasang pilihan QRIS & Rekening BSI ke dalam Formulir Booking
+    // 2. Isi ruang kosong ("lowong") di bawah daftar paket sebelah kiri agar seimbang
+    function pasangPanelPengisiKolomKiri() {
+      const catalogGrid = document.getElementById('public-catalog-cards');
+      if (!catalogGrid || document.getElementById('pub-studio-info-filler')) return;
+
+      const leftCol = catalogGrid.closest('.lg\\:col-span-7') || catalogGrid.parentElement.parentElement;
+      if (!leftCol) return;
+
+      const infoPanel = document.createElement('div');
+      infoPanel.id = 'pub-studio-info-filler';
+      infoPanel.className = 'pt-4 mt-4 border-t border-[#E6D5C3] space-y-4';
+      infoPanel.innerHTML = `
+        <div>
+          <span class="text-[11px] font-bold uppercase text-terracotta">2. Alur Booking & Transaksi Resmi (Otomatis)</span>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2">
+            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 01</div>
+              <div class="text-xs font-bold text-espresso mt-0.5">Pilih Paket</div>
+              <p class="text-[11px] text-espressoMuted mt-0.5">Klik paket sesuai acara & cek rincian fasilitasnya.</p>
+            </div>
+            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 02</div>
+              <div class="text-xs font-bold text-espresso mt-0.5">Scan QRIS / BSI</div>
+              <p class="text-[11px] text-espressoMuted mt-0.5">Bayar DP 30% atau Lunas via QRIS / Transfer BSI.</p>
+            </div>
+            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 03</div>
+              <div class="text-xs font-bold text-espresso mt-0.5">Upload Bukti</div>
+              <p class="text-[11px] text-espressoMuted mt-0.5">Lampirkan foto bukti bayar langsung di formulir web.</p>
+            </div>
+            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 04</div>
+              <div class="text-xs font-bold text-espresso mt-0.5">Jadwal Terkunci</div>
+              <p class="text-[11px] text-espressoMuted mt-0.5">Data otomatis masuk ke sistem Admin & Invoice terbit.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3.5 rounded-2xl bg-cream border border-[#DEC9B5] space-y-1.5">
+            <div class="text-xs font-bold text-espresso flex items-center gap-1.5">
+              <span>✨</span> Ketentuan & Garansi Studio
+            </div>
+            <ul class="text-[11px] text-espressoMuted space-y-1 pl-4 list-disc">
+              <li><strong>Kunci Jadwal:</strong> DP minimal 30%, pelunasan maksimal saat hari acara selesai.</li>
+              <li><strong>Estimasi File:</strong> Foto preview 1–3 hari, hasil edit 3–7 hari kerja via Google Drive.</li>
+              <li><strong>Fleksibel:</strong> Bebas konsultasi konsep & lokasi area Banyuwangi dan sekitarnya.</li>
+            </ul>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-cream border border-[#DEC9B5] space-y-1.5">
+            <div class="text-xs font-bold text-espresso flex items-center gap-1.5">
+              <span>➕</span> Layanan Tambahan (Add-On Populer)
+            </div>
+            <div class="text-[11px] text-espressoMuted space-y-1">
+              <div class="flex justify-between"><span>• Extra Durasi Liputan (Per Jam)</span><strong class="text-espresso">Rp 100.000</strong></div>
+              <div class="flex justify-between"><span>• Tambah Fotografer / Kru</span><strong class="text-espresso">Rp 300.000</strong></div>
+              <div class="flex justify-between"><span>• Video Highlight / Reels Cinematic</span><strong class="text-espresso">Rp 250.000</strong></div>
+              <div class="flex justify-between"><span>• Cetak Pigora 12R–16R / Album</span><strong class="text-espresso">Mulai Rp 125.000</strong></div>
+            </div>
+          </div>
+        </div>
+      `;
+      leftCol.appendChild(infoPanel);
+    }
+
+    // 3. Pasang Formulir Pembayaran Ringkas + Upload Bukti Transfer
     function pasangFormPembayaranKlien() {
       const venueInput = document.getElementById('pub-client-venue');
       const pkgSelect = document.getElementById('pub-package-select');
-      if (!venueInput) return;
+      if (!venueInput || document.getElementById('pub-payment-box')) return;
 
-      // Jika kotak pembayaran belum ada di layar, tambahkan otomatis
-      if (!document.getElementById('pub-payment-box')) {
-        const formWrap = venueInput.closest('.space-y-3') || venueInput.parentElement.parentElement;
-        const payDiv = document.createElement('div');
-        payDiv.id = 'pub-payment-box';
-        payDiv.className = 'pt-3 mt-3 border-t border-[#E6D5C3] space-y-3 text-xs';
-        payDiv.innerHTML = `
+      const formWrap = venueInput.closest('.space-y-3') || venueInput.parentElement.parentElement;
+      const payDiv = document.createElement('div');
+      payDiv.id = 'pub-payment-box';
+      payDiv.className = 'pt-3 mt-3 border-t border-[#E6D5C3] space-y-3 text-xs';
+      payDiv.innerHTML = `
+        <div>
+          <label class="font-bold text-espresso uppercase block mb-1">Nomor WhatsApp Aktif</label>
+          <input id="pub-client-phone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="font-bold text-espresso uppercase block mb-1">Nomor WhatsApp Aktif</label>
-            <input id="pub-client-phone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso" />
-          </div>
-
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="font-bold text-espresso uppercase block mb-1">Opsi Pembayaran</label>
-              <select id="pub-payment-term" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-                <option value="DP 30%">DP 30% (Kunci Slot)</option>
-                <option value="Lunas 100%">Bayar Lunas (100%)</option>
-              </select>
-            </div>
-            <div>
-              <label class="font-bold text-espresso uppercase block mb-1">Metode Transaksi</label>
-              <select id="pub-payment-method" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-                <option value="QRIS">QRIS (Semua Bank / E-Wallet)</option>
-                <option value="Transfer BSI">Transfer Bank BSI</option>
-              </select>
-            </div>
-          </div>
-
-          <div id="pub-payment-instruction" class="p-3.5 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2.5"></div>
-
-          <div>
-            <label class="font-bold text-espresso uppercase block mb-1">Status Konfirmasi Pembayaran</label>
-            <select id="pub-payment-status-confirm" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-sage">
-              <option value="Sudah Bayar (Siap Kirim Bukti di WA)">✅ Sudah Bayar / Siap Kirim Bukti di WA</option>
-              <option value="Booking Jadwal Dulu (DP Menyusul)">⏳ Booking Jadwal Dulu (Bayar Menyusul)</option>
+            <label class="font-bold text-espresso uppercase block mb-1">Opsi Pembayaran</label>
+            <select id="pub-payment-term" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
+              <option value="DP 30%">DP 30% (Kunci Slot)</option>
+              <option value="Lunas 100%">Bayar Lunas (100%)</option>
             </select>
           </div>
-        `;
-        formWrap.appendChild(payDiv);
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Metode Transaksi</label>
+            <select id="pub-payment-method" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
+              <option value="QRIS">QRIS (Semua Bank / E-Wallet)</option>
+              <option value="Transfer BSI">Transfer Bank BSI</option>
+            </select>
+          </div>
+        </div>
 
-        // Ubah teks tombol kirim bawah agar terlihat sudah aktif
-        const btnSubmit = document.querySelector('button[onclick*="submitPublicBooking"]');
-        if (btnSubmit) {
-          btnSubmit.innerHTML = 'Kirim Booking & Konfirmasi Bayar →';
-        }
+        <!-- Kotak QRIS / Rekening (Anti-Kedip & Lebih Ringkas) -->
+        <div id="pub-payment-instruction" class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2"></div>
 
-        if (pkgSelect) {
-          pkgSelect.addEventListener('change', hitungDanTampilkanTagihan);
-        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-start">
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Status Pembayaran</label>
+            <select id="pub-payment-status-confirm" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-sage">
+              <option value="Sudah Bayar">✅ Sudah Bayar DP / Lunas</option>
+              <option value="Booking Dulu">⏳ Booking Dulu (DP Menyusul)</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Upload Bukti Bayar</label>
+            <input id="pub-payment-proof" type="file" accept="image/*" onchange="prosesUploadBukti(this)" class="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] text-[11px] text-espresso file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-beige file:text-espresso" />
+          </div>
+        </div>
+
+        <div id="pub-proof-preview-wrap" class="hidden p-2.5 rounded-xl bg-sageLight/60 border border-sage/30 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <img id="pub-proof-img" src="" class="w-10 h-10 object-cover rounded-lg border border-sage" />
+            <div class="truncate">
+              <div class="text-[11px] font-bold text-sage">✅ Bukti Bayar Siap Dikirim ke Server</div>
+              <div class="text-[10px] text-espressoMuted">Otomatis masuk ke menu Booking Admin</div>
+            </div>
+          </div>
+          <button type="button" onclick="hapusBuktiBayar()" class="text-xs font-bold text-danger px-2">✕</button>
+        </div>
+
+        <div id="pub-ticket-result" class="hidden p-3.5 rounded-2xl bg-sageLight border-2 border-sage space-y-2 text-espresso"></div>
+      `;
+      formWrap.appendChild(payDiv);
+
+      const btnSubmit = document.querySelector('button[onclick*="submitPublicBooking"]');
+      if (btnSubmit) {
+        btnSubmit.id = 'btn-submit-public-booking';
+        btnSubmit.innerHTML = 'Kunci Jadwal & Kirim ke Server Admin →';
+      }
+
+      if (pkgSelect) {
+        pkgSelect.addEventListener('change', hitungDanTampilkanTagihan);
       }
 
       hitungDanTampilkanTagihan();
     }
 
-    // 3. Ambil harga paket aktif & tampilkan QRIS atau Rekening BSI
+    // 4. Kompres Foto Bukti Bayar Agar Ringan Masuk ke Database Firebase
+    window.prosesUploadBukti = function(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 480;
+          let w = img.width, h = img.height;
+          if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else if (h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          buktiBayarBase64 = canvas.toDataURL('image/jpeg', 0.72);
+          const wrap = document.getElementById('pub-proof-preview-wrap');
+          const previewImg = document.getElementById('pub-proof-img');
+          if (wrap && previewImg) {
+            previewImg.src = buktiBayarBase64;
+            wrap.classList.remove('hidden');
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    window.hapusBuktiBayar = function() {
+      buktiBayarBase64 = '';
+      const inp = document.getElementById('pub-payment-proof');
+      const wrap = document.getElementById('pub-proof-preview-wrap');
+      if (inp) inp.value = '';
+      if (wrap) wrap.classList.add('hidden');
+    };
+
+    // 5. Ambil Paket Aktif & Render Kotak QRIS / BSI Tanpa Kedip
     function ambilDataPaketAktif() {
       const pkgSelect = document.getElementById('pub-package-select');
-      if (!pkgSelect) return { id: 'PKG-1', category: 'Engagement', name: 'ENGAGEMENT 01', price: 500000 };
+      if (!pkgSelect) return { id: 'G-03', category: 'Graduation', name: 'GRADUATION - PREMIUM', price: 500000 };
 
       const val = pkgSelect.value;
       if (typeof appState !== 'undefined' && Array.isArray(appState.pricelist)) {
@@ -812,14 +942,18 @@
         if (found) return found;
       }
 
-      // Fallback baca langsung dari teks pilihan dropdown (misal: "ENGAGEMENT 01 — Rp 500.000")
       const optText = pkgSelect.options[pkgSelect.selectedIndex] ? pkgSelect.options[pkgSelect.selectedIndex].text : '';
       const parts = optText.split('—');
-      const namePart = (parts[0] || 'Paket Pilihan').trim();
+      const namePart = (parts[0] || 'GRADUATION - PREMIUM').trim();
       const priceMatch = (parts[1] || optText).replace(/[^0-9]/g, '');
+      let cat = 'Wedding';
+      if (namePart.toUpperCase().includes('ENGAGEMENT')) cat = 'Engagement';
+      else if (namePart.toUpperCase().includes('GRADUATION')) cat = 'Graduation';
+      else if (namePart.toUpperCase().includes('MATERNITY')) cat = 'Maternity';
+
       return {
         id: val || 'PKG-1',
-        category: namePart.split(' ')[0] || 'Wedding',
+        category: cat,
         name: namePart,
         price: parseInt(priceMatch || '500000', 10)
       };
@@ -840,47 +974,97 @@
       const metode = methodEl ? methodEl.value : 'QRIS';
       const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 
-      if (metode === 'QRIS') {
-        box.innerHTML = `
-          <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
-            <span class="text-espressoMuted font-medium">Tagihan ${isLunas ? 'Lunas (100%)' : 'DP 30%'}</span>
-            <span class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
-          </div>
-          <div class="text-center space-y-2 pt-1">
-            <div class="text-[11px] font-extrabold text-espresso">${REKENING_STUDIO.merchantQris}</div>
-            <div class="text-[10px] text-espressoMuted font-mono">NMID: ${REKENING_STUDIO.nmid}</div>
-            <div class="bg-white p-2 rounded-2xl border border-[#E6D5C3] inline-block mx-auto shadow-sm">
-              <img src="${REKENING_STUDIO.fileQris}" alt="QRIS FILEPHOTOKU.STD" class="w-48 h-auto mx-auto rounded-lg"
-                   onerror="this.onerror=null; this.src='https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(REKENING_STUDIO.merchantQris + ' - ' + REKENING_STUDIO.nmid)}';" />
+      // Hanya ganti struktur bila metode berubah; jika sama cukup perbarui teks nominal agar gambar tidak pernah kedip!
+      if (box.dataset.renderedMethod !== metode) {
+        box.dataset.renderedMethod = metode;
+        if (metode === 'QRIS') {
+          const fallbackQr = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(REKENING_STUDIO.merchantQris + ' NMID:' + REKENING_STUDIO.nmid);
+          box.innerHTML = `
+            <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
+              <span id="label-tagihan-aktif" class="text-espressoMuted font-semibold">Tagihan DP 30%</span>
+              <span id="nominal-tagihan-aktif" class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
             </div>
-            <p class="text-[11px] text-espressoMuted leading-relaxed">
-              Scan menggunakan M-Banking (BSI, BCA, BRI, Mandiri, BNI) atau DANA, GoPay, ShopeePay, OVO.
-            </p>
-          </div>
-        `;
-      } else {
-        box.innerHTML = `
-          <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
-            <span class="text-espressoMuted font-medium">Tagihan ${isLunas ? 'Lunas (100%)' : 'DP 30%'}</span>
-            <span class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
-          </div>
-          <div class="space-y-2 pt-1">
-            <div class="text-[11px] font-bold text-espresso uppercase">${REKENING_STUDIO.bank}</div>
-            <div class="flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-[#DEC9B5]">
-              <div>
-                <div class="font-mono text-sm font-extrabold text-espresso tracking-wide">${REKENING_STUDIO.nomor}</div>
-                <div class="text-[10px] font-bold text-espressoMuted">A.N. ${REKENING_STUDIO.atasNama}</div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+              <div class="bg-white p-2 rounded-2xl border border-[#E6D5C3] shrink-0 shadow-sm">
+                <img id="img-qris-studio" src="${REKENING_STUDIO.fileQris}" alt="QRIS" class="w-32 h-32 object-contain rounded-lg mx-auto"
+                     onerror="if(!this.dataset.fb){this.dataset.fb='1'; this.src='${fallbackQr}';}" />
               </div>
-              <button type="button" onclick="navigator.clipboard.writeText('${REKENING_STUDIO.nomor}'); alert('Nomor Rekening BSI ${REKENING_STUDIO.nomor} berhasil disalin!');" class="px-3 py-1.5 rounded-lg bg-beige hover:bg-terracotta hover:text-white text-espresso text-[11px] font-bold transition">
-                Salin Rek
-              </button>
+              <div class="space-y-1 text-center sm:text-left">
+                <div class="inline-block px-2 py-0.5 rounded-md bg-orange-100 text-[#9E5231] text-[10px] font-extrabold">QRIS GPN RESMI</div>
+                <div class="text-xs font-extrabold text-espresso leading-snug">${REKENING_STUDIO.merchantQris}</div>
+                <div class="text-[10px] font-mono text-espressoMuted">NMID: ${REKENING_STUDIO.nmid}</div>
+                <p class="text-[10px] text-espressoMuted leading-relaxed pt-0.5">
+                  Scan via M-Banking (BSI, BCA, BRI, Mandiri, BNI) / DANA, GoPay, ShopeePay, lalu upload screenshot bukti di bawah.
+                </p>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          box.innerHTML = `
+            <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
+              <span id="label-tagihan-aktif" class="text-espressoMuted font-semibold">Tagihan DP 30%</span>
+              <span id="nominal-tagihan-aktif" class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
+            </div>
+            <div class="space-y-2 pt-1">
+              <div class="text-[11px] font-bold text-espresso uppercase">${REKENING_STUDIO.bank}</div>
+              <div class="flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-[#DEC9B5]">
+                <div>
+                  <div class="font-mono text-sm font-extrabold text-espresso tracking-wide">${REKENING_STUDIO.nomor}</div>
+                  <div class="text-[10px] font-bold text-espressoMuted">A.N. ${REKENING_STUDIO.atasNama}</div>
+                </div>
+                <button type="button" onclick="navigator.clipboard.writeText('${REKENING_STUDIO.nomor}'); alert('Nomor Rekening BSI ${REKENING_STUDIO.nomor} berhasil disalin!');" class="px-3 py-1.5 rounded-lg bg-beige hover:bg-terracotta hover:text-white text-espresso text-[11px] font-bold transition">
+                  Salin Rek
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        const lbl = document.getElementById('label-tagihan-aktif');
+        const nom = document.getElementById('nominal-tagihan-aktif');
+        if (lbl) lbl.innerText = isLunas ? 'Tagihan Lunas (100%)' : 'Tagihan DP 30%';
+        if (nom) nom.innerText = formatRp(nominalTagihan);
       }
     };
 
-    // 4. Timpa fungsi Kirim Booking agar menyimpan ke Server Firebase + kirim detail QRIS/BSI ke WA
+    // 6. Gabungkan Data Booking Lokal & Cloud agar Booking Klien Tidak Pernah Hilang
+    function gabungkanDaftarBooking(lokal = [], cloud = []) {
+      const map = new Map();
+      cloud.forEach(b => { if (b && b.id) map.set(String(b.id), b); });
+      lokal.forEach(b => {
+        if (!b || !b.id) return;
+        const k = String(b.id);
+        if (!map.has(k) || (b.updatedAt || 0) >= (map.get(k).updatedAt || 0)) {
+          map.set(k, Object.assign({}, map.get(k) || {}, b));
+        }
+      });
+      return Array.from(map.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    // 7. Tarik Data Booking dari Firebase ke Halaman Admin Secara Otomatis
+    window.tarikDataBookingDariCloud = async function() {
+      if (sedangSinkronCloud) return;
+      try {
+        sedangSinkronCloud = true;
+        const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
+        if (!res.ok) return;
+        const cloudData = await res.json();
+        if (cloudData && Array.isArray(cloudData.bookings) && typeof appState !== 'undefined') {
+          const gabungan = gabungkanDaftarBooking(appState.bookings || [], cloudData.bookings);
+          appState.bookings = gabungan;
+          const key = typeof STORAGE_KEY !== 'undefined' ? STORAGE_KEY : 'filephotoku_std_db_v1';
+          localStorage.setItem(key, JSON.stringify(appState));
+          if (typeof renderAll === 'function') renderAll();
+          tampilkanBadgeBuktiDiAdmin();
+        }
+      } catch (e) {
+        console.warn('Gagal tarik cloud:', e);
+      } finally {
+        sedangSinkronCloud = false;
+      }
+    };
+
+    // 8. Simpan Booking Klien ke Memori Admin + Firebase + Tampilkan Tiket Resmi di Web
     window.submitPublicBooking = async function() {
       const nameInput = document.getElementById('pub-client-name');
       const dayInput = document.getElementById('pub-client-day');
@@ -908,9 +1092,16 @@
       const dpNominal = Math.round(total * 0.3);
       const nominalBayar = term === 'Lunas 100%' ? total : dpNominal;
       const sudahBayar = statusConfirm.includes('Sudah Bayar');
+      const kodeInvoice = 'INV-' + String(Date.now()).slice(-6);
 
-      const newBooking = {
+      // Gunakan struktur yang 100% dikenali oleh Menu Booking, Dashboard Kas, & Invoice Admin
+      const templateDasar = (typeof appState !== 'undefined' && Array.isArray(appState.bookings) && appState.bookings[0])
+        ? JSON.parse(JSON.stringify(appState.bookings[0]))
+        : {};
+
+      const newBooking = Object.assign({}, templateDasar, {
         id: 'BK-' + Date.now(),
+        invoiceCode: kodeInvoice,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         client: clientName,
@@ -918,8 +1109,9 @@
         phone: phone,
         day: day,
         date: `${day} Nov 2026`,
-        category: pkg.category || 'Engagement',
+        category: pkg.category || 'Graduation',
         packageId: pkg.id,
+        pkgId: pkg.id,
         packageName: pkg.name,
         price: total,
         transport: 0,
@@ -927,35 +1119,45 @@
         targetDp: dpNominal,
         paymentMethod: method,
         paymentTerm: term,
-        paymentStatus: statusConfirm,
-        status: sudahBayar ? 'DP Masuk' : 'Booking Baru',
+        paymentStatus: sudahBayar ? `Lunas ${term} (${method})` : 'Menunggu DP',
+        proofImage: buktiBayarBase64 || '',
+        status: sudahBayar ? (term === 'Lunas 100%' ? 'Lunas' : 'DP Masuk') : 'Booking Baru',
         stage: 'Booking',
         venue: venue,
         location: venue,
         driveLink: '',
         selectedPhotos: [],
+        addons: [],
+        customItems: [],
         crew: [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
-      };
+      });
 
-      const btnSubmit = document.querySelector('button[onclick*="submitPublicBooking"]');
-      if (btnSubmit) btnSubmit.innerText = '⏳ Menyimpan ke Server & Membuka WA...';
+      const btnSubmit = document.getElementById('btn-submit-public-booking');
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = '⏳ Menyimpan Data ke Server Admin...';
+      }
 
       try {
+        // A. Simpan langsung ke memori appState & LocalStorage dengan kunci asli data.js
+        const keyStorage = typeof STORAGE_KEY !== 'undefined' ? STORAGE_KEY : 'filephotoku_std_db_v1';
         if (typeof appState !== 'undefined') {
           appState.bookingFilter = 'All';
           if (!Array.isArray(appState.bookings)) appState.bookings = [];
           appState.bookings.unshift(newBooking);
-          localStorage.setItem('filephotoku_std_db_v1', JSON.stringify(appState));
+          localStorage.setItem(keyStorage, JSON.stringify(appState));
         }
 
-        // Ambil data server Firebase terbaru lalu gabungkan agar tidak menimpa pesanan lain
+        // B. Gabungkan dan simpan ke Cloud Firebase
         const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
         let cloudData = res.ok ? await res.json() : null;
         if (!cloudData || typeof cloudData !== 'object') {
           cloudData = typeof appState !== 'undefined' ? JSON.parse(JSON.stringify(appState)) : { bookings: [] };
         }
-        if (!Array.isArray(cloudData.bookings)) cloudData.bookings = [];
-        cloudData.bookings.unshift(newBooking);
+        cloudData.bookings = gabungkanDaftarBooking(
+          typeof appState !== 'undefined' ? appState.bookings : [newBooking],
+          Array.isArray(cloudData.bookings) ? cloudData.bookings : []
+        );
         delete cloudData.isUnlocked;
         delete cloudData.activeTab;
 
@@ -964,8 +1166,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(cloudData)
         });
+
+        if (typeof renderAll === 'function') renderAll();
       } catch (err) {
-        console.warn('Gagal sinkron ke Firebase:', err);
+        console.warn('Kendala jaringan cloud:', err);
       }
 
       const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -974,34 +1178,108 @@
         : `BSI ${REKENING_STUDIO.nomor} a.n. ${REKENING_STUDIO.atasNama}`;
 
       const waText =
-        `Halo Admin *FILEPHOTOKU.STD*, saya ingin konfirmasi Booking & Pembayaran:\n\n` +
+        `Halo Admin *FILEPHOTOKU.STD*, saya sudah mengisi Booking & Pembayaran di Web:\n\n` +
+        `• *Kode Tiket:* #${kodeInvoice}\n` +
         `• *Nama Klien:* ${clientName}\n` +
         `• *No. WA:* ${phone}\n` +
-        `• *Paket Pilihan:* ${pkg.name}\n` +
+        `• *Paket Pilihan:* [${pkg.category}] ${pkg.name}\n` +
         `• *Tanggal Acara:* Tanggal ${day}\n` +
         `• *Lokasi Venue:* ${venue}\n` +
         `• *Harga Paket:* ${formatRp(total)}\n` +
-        `• *Opsi Pembayaran:* ${term} (${formatRp(nominalBayar)})\n` +
+        `• *Nominal Dibayar:* ${term} (${formatRp(nominalBayar)})\n` +
         `• *Metode Transaksi:* *${tujuanBayar}*\n` +
-        `• *Status:* ${statusConfirm}\n\n` +
-        `Berikut saya lampirkan bukti pembayarannya. Terima kasih!`;
+        `• *Bukti di Web:* ${buktiBayarBase64 ? 'Sudah Diupload ke Server Admin ✅' : 'Menyusul di Chat WA'}\n\n` +
+        `Mohon dicek di Dashboard Admin FILEPHOTOKU.STD. Terima kasih!`;
 
-      window.location.href = `https://api.whatsapp.com/send?phone=6285708001457&text=${encodeURIComponent(waText)}`;
+      const waUrl = `https://api.whatsapp.com/send?phone=6285708001457&text=${encodeURIComponent(waText)}`;
+
+      // C. Tampilkan Tiket Bukti Booking Resmi langsung di layar Web & kembalikan tombol seperti semula
+      const ticketBox = document.getElementById('pub-ticket-result');
+      if (ticketBox) {
+        ticketBox.classList.remove('hidden');
+        ticketBox.innerHTML = `
+          <div class="flex items-center justify-between border-b border-sage/30 pb-1.5">
+            <span class="text-xs font-extrabold text-sage">✅ TERCATAT DI SERVER ADMIN</span>
+            <span class="font-mono text-xs font-bold bg-white px-2 py-0.5 rounded border border-sage">#${kodeInvoice}</span>
+          </div>
+          <div class="text-[11px] space-y-0.5 pt-1">
+            <div><strong>Klien:</strong> ${clientName} (Tgl ${day} • ${venue})</div>
+            <div><strong>Paket:</strong> ${pkg.name}</div>
+            <div><strong>Transaksi:</strong> ${term} — <strong>${formatRp(nominalBayar)}</strong> via ${method}</div>
+          </div>
+          <a href="${waUrl}" target="_blank" class="mt-2 block w-full text-center py-2 rounded-xl bg-sage text-white text-xs font-bold shadow">
+            📲 Kirim Notifikasi ke WhatsApp Admin →
+          </a>
+        `;
+      }
+
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '✅ Berhasil Tersimpan! Kirim Booking Baru →';
+      }
+
+      // Buka WA di tab baru agar halaman web tidak terputus
+      window.open(waUrl, '_blank');
     };
 
-    // Perbarui nominal otomatis saat klien mengklik tombol "Pilih Paket Ini" di kartu kiri
+    // 9. Tampilkan Tombol Lihat Foto Bukti Transfer di Kartu Booking Admin
+    function tampilkanBadgeBuktiDiAdmin() {
+      if (typeof appState === 'undefined' || !Array.isArray(appState.bookings)) return;
+      const bookingSection = document.getElementById('tab-booking');
+      if (!bookingSection) return;
+
+      appState.bookings.forEach(bk => {
+        if (!bk.paymentMethod && !bk.proofImage) return;
+        const cards = bookingSection.querySelectorAll('div');
+        cards.forEach(card => {
+          if (card.children.length > 1 && card.innerText && card.innerText.includes(bk.client) && !card.querySelector('.badge-bukti-fp')) {
+            const bar = document.createElement('div');
+            bar.className = 'badge-bukti-fp mt-2 pt-2 border-t border-[#E6D5C3] flex flex-wrap items-center justify-between gap-2 text-[11px]';
+            bar.innerHTML = `
+              <span class="px-2.5 py-1 rounded-lg bg-amberLight text-espresso font-bold">
+                💳 ${bk.paymentMethod || 'QRIS'} • ${bk.paymentTerm || 'DP 30%'}
+              </span>
+              ${bk.proofImage ? `<button type="button" onclick="lihatFotoBuktiBayar('${bk.id}')" class="px-2.5 py-1 rounded-lg bg-sage text-white font-bold">👁️ Lihat Foto Bukti Bayar</button>` : `<span class="text-espressoMuted">Bukti via WA</span>`}
+            `;
+            card.appendChild(bar);
+          }
+        });
+      });
+    }
+
+    window.lihatFotoBuktiBayar = function(bookingId) {
+      const bk = (appState.bookings || []).find(b => String(b.id) === String(bookingId));
+      if (!bk || !bk.proofImage) return;
+      const w = window.open('', '_blank', 'width=480,height=640');
+      w.document.write(`
+        <html><head><title>Bukti Bayar - ${bk.client}</title></head>
+        <body style="font-family:sans-serif;text-align:center;background:#FAF3EB;padding:20px;">
+          <h3 style="margin-bottom:4px;">Bukti Pembayaran ${bk.client}</h3>
+          <p style="font-size:13px;color:#555;margin-top:0;">${bk.packageName} • ${bk.paymentMethod} (${bk.paymentTerm})</p>
+          <img src="${bk.proofImage}" style="max-width:100%;border-radius:16px;border:2px solid #DEC9B5;box-shadow:0 8px 24px rgba(0,0,0,0.12);" />
+        </body></html>
+      `);
+    };
+
+    // Perbarui nominal saat klik kartu paket atau pindah tab Admin
     document.addEventListener('click', (e) => {
-      if (e.target && e.target.innerText && e.target.innerText.includes('Pilih Paket Ini')) {
+      const txt = (e.target && e.target.innerText) ? e.target.innerText : '';
+      if (txt.includes('Pilih Paket Ini')) {
         setTimeout(hitungDanTampilkanTagihan, 100);
+      }
+      if (txt.includes('Booking & Drive') || txt.includes('Dashboard') || txt.includes('Invoice') || txt.includes('Buka Studio OS')) {
+        if (typeof appState !== 'undefined') appState.bookingFilter = 'All';
+        setTimeout(tarikDataBookingDariCloud, 200);
       }
     });
 
     window.addEventListener('DOMContentLoaded', () => {
-      pastikanHalamanKlienAktif();
-      setTimeout(pastikanHalamanKlienAktif, 400);
+      jagaTampilanKlien();
+      tarikDataBookingDariCloud();
     });
 
-    setInterval(pastikanHalamanKlienAktif, 1000);
+    setInterval(jagaTampilanKlien, 1200);
+    setInterval(tarikDataBookingDariCloud, 7000);
   </script>
 </body>
 </html>
