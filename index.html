@@ -696,5 +696,308 @@
     // Pantau setiap 1 detik agar tidak kembali kosong setelah sinkronisasi server
     setInterval(pastikanHalamanKlienMuncul, 1000);
   </script>
+  <!-- =====================================================================
+       MODUL LANGSUNG: ANTI-BLANK + TRANSAKSI QRIS & REKENING BSI RESMI
+       ===================================================================== -->
+  <style>
+    body.public-client-mode #tab-website {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+  </style>
+
+  <script>
+    const FP_CLOUD_URL = 'https://filephotoku-db-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+    const REKENING_STUDIO = {
+      bank: 'BSI (Bank Syariah Indonesia)',
+      nomor: '7306276721',
+      atasNama: 'MOH ZULQORNAIN ROFIQI',
+      merchantQris: 'MZRNAIN STORE, DIGITAL & KREATIF',
+      nmid: 'ID1026470533344',
+      fileQris: 'qris.jpg'
+    };
+
+    // 1. Pastikan halaman klien tidak pernah kosong saat dibuka/refresh
+    function pastikanHalamanKlienAktif() {
+      if (document.body.classList.contains('public-client-mode')) {
+        const webTab = document.getElementById('tab-website');
+        if (webTab && webTab.offsetHeight < 50) {
+          document.querySelectorAll('button').forEach(btn => {
+            if (btn.innerText && btn.innerText.includes('Lihat Mode Klien')) btn.click();
+          });
+          if (typeof switchTab === 'function') switchTab('website');
+          webTab.classList.remove('hidden');
+          webTab.classList.add('active');
+          webTab.style.display = 'block';
+        }
+      }
+      pasangFormPembayaranKlien();
+    }
+
+    // 2. Pasang pilihan QRIS & Rekening BSI ke dalam Formulir Booking
+    function pasangFormPembayaranKlien() {
+      const venueInput = document.getElementById('pub-client-venue');
+      const pkgSelect = document.getElementById('pub-package-select');
+      if (!venueInput) return;
+
+      // Jika kotak pembayaran belum ada di layar, tambahkan otomatis
+      if (!document.getElementById('pub-payment-box')) {
+        const formWrap = venueInput.closest('.space-y-3') || venueInput.parentElement.parentElement;
+        const payDiv = document.createElement('div');
+        payDiv.id = 'pub-payment-box';
+        payDiv.className = 'pt-3 mt-3 border-t border-[#E6D5C3] space-y-3 text-xs';
+        payDiv.innerHTML = `
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Nomor WhatsApp Aktif</label>
+            <input id="pub-client-phone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="font-bold text-espresso uppercase block mb-1">Opsi Pembayaran</label>
+              <select id="pub-payment-term" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
+                <option value="DP 30%">DP 30% (Kunci Slot)</option>
+                <option value="Lunas 100%">Bayar Lunas (100%)</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-espresso uppercase block mb-1">Metode Transaksi</label>
+              <select id="pub-payment-method" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
+                <option value="QRIS">QRIS (Semua Bank / E-Wallet)</option>
+                <option value="Transfer BSI">Transfer Bank BSI</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="pub-payment-instruction" class="p-3.5 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2.5"></div>
+
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Status Konfirmasi Pembayaran</label>
+            <select id="pub-payment-status-confirm" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-sage">
+              <option value="Sudah Bayar (Siap Kirim Bukti di WA)">✅ Sudah Bayar / Siap Kirim Bukti di WA</option>
+              <option value="Booking Jadwal Dulu (DP Menyusul)">⏳ Booking Jadwal Dulu (Bayar Menyusul)</option>
+            </select>
+          </div>
+        `;
+        formWrap.appendChild(payDiv);
+
+        // Ubah teks tombol kirim bawah agar terlihat sudah aktif
+        const btnSubmit = document.querySelector('button[onclick*="submitPublicBooking"]');
+        if (btnSubmit) {
+          btnSubmit.innerHTML = 'Kirim Booking & Konfirmasi Bayar →';
+        }
+
+        if (pkgSelect) {
+          pkgSelect.addEventListener('change', hitungDanTampilkanTagihan);
+        }
+      }
+
+      hitungDanTampilkanTagihan();
+    }
+
+    // 3. Ambil harga paket aktif & tampilkan QRIS atau Rekening BSI
+    function ambilDataPaketAktif() {
+      const pkgSelect = document.getElementById('pub-package-select');
+      if (!pkgSelect) return { id: 'PKG-1', category: 'Engagement', name: 'ENGAGEMENT 01', price: 500000 };
+
+      const val = pkgSelect.value;
+      if (typeof appState !== 'undefined' && Array.isArray(appState.pricelist)) {
+        const found = appState.pricelist.find(p => String(p.id) === String(val) || p.name === val);
+        if (found) return found;
+      }
+
+      // Fallback baca langsung dari teks pilihan dropdown (misal: "ENGAGEMENT 01 — Rp 500.000")
+      const optText = pkgSelect.options[pkgSelect.selectedIndex] ? pkgSelect.options[pkgSelect.selectedIndex].text : '';
+      const parts = optText.split('—');
+      const namePart = (parts[0] || 'Paket Pilihan').trim();
+      const priceMatch = (parts[1] || optText).replace(/[^0-9]/g, '');
+      return {
+        id: val || 'PKG-1',
+        category: namePart.split(' ')[0] || 'Wedding',
+        name: namePart,
+        price: parseInt(priceMatch || '500000', 10)
+      };
+    }
+
+    window.hitungDanTampilkanTagihan = function() {
+      const box = document.getElementById('pub-payment-instruction');
+      if (!box) return;
+
+      const pkg = ambilDataPaketAktif();
+      const total = Number(pkg.price || 0);
+      const dp = Math.round(total * 0.3);
+
+      const termEl = document.getElementById('pub-payment-term');
+      const methodEl = document.getElementById('pub-payment-method');
+      const isLunas = termEl && termEl.value === 'Lunas 100%';
+      const nominalTagihan = isLunas ? total : dp;
+      const metode = methodEl ? methodEl.value : 'QRIS';
+      const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+
+      if (metode === 'QRIS') {
+        box.innerHTML = `
+          <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
+            <span class="text-espressoMuted font-medium">Tagihan ${isLunas ? 'Lunas (100%)' : 'DP 30%'}</span>
+            <span class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
+          </div>
+          <div class="text-center space-y-2 pt-1">
+            <div class="text-[11px] font-extrabold text-espresso">${REKENING_STUDIO.merchantQris}</div>
+            <div class="text-[10px] text-espressoMuted font-mono">NMID: ${REKENING_STUDIO.nmid}</div>
+            <div class="bg-white p-2 rounded-2xl border border-[#E6D5C3] inline-block mx-auto shadow-sm">
+              <img src="${REKENING_STUDIO.fileQris}" alt="QRIS FILEPHOTOKU.STD" class="w-48 h-auto mx-auto rounded-lg"
+                   onerror="this.onerror=null; this.src='https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(REKENING_STUDIO.merchantQris + ' - ' + REKENING_STUDIO.nmid)}';" />
+            </div>
+            <p class="text-[11px] text-espressoMuted leading-relaxed">
+              Scan menggunakan M-Banking (BSI, BCA, BRI, Mandiri, BNI) atau DANA, GoPay, ShopeePay, OVO.
+            </p>
+          </div>
+        `;
+      } else {
+        box.innerHTML = `
+          <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
+            <span class="text-espressoMuted font-medium">Tagihan ${isLunas ? 'Lunas (100%)' : 'DP 30%'}</span>
+            <span class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
+          </div>
+          <div class="space-y-2 pt-1">
+            <div class="text-[11px] font-bold text-espresso uppercase">${REKENING_STUDIO.bank}</div>
+            <div class="flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-[#DEC9B5]">
+              <div>
+                <div class="font-mono text-sm font-extrabold text-espresso tracking-wide">${REKENING_STUDIO.nomor}</div>
+                <div class="text-[10px] font-bold text-espressoMuted">A.N. ${REKENING_STUDIO.atasNama}</div>
+              </div>
+              <button type="button" onclick="navigator.clipboard.writeText('${REKENING_STUDIO.nomor}'); alert('Nomor Rekening BSI ${REKENING_STUDIO.nomor} berhasil disalin!');" class="px-3 py-1.5 rounded-lg bg-beige hover:bg-terracotta hover:text-white text-espresso text-[11px] font-bold transition">
+                Salin Rek
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    };
+
+    // 4. Timpa fungsi Kirim Booking agar menyimpan ke Server Firebase + kirim detail QRIS/BSI ke WA
+    window.submitPublicBooking = async function() {
+      const nameInput = document.getElementById('pub-client-name');
+      const dayInput = document.getElementById('pub-client-day');
+      const venueInput = document.getElementById('pub-client-venue');
+      const phoneInput = document.getElementById('pub-client-phone');
+      const termSelect = document.getElementById('pub-payment-term');
+      const methodSelect = document.getElementById('pub-payment-method');
+      const statusSelect = document.getElementById('pub-payment-status-confirm');
+
+      const clientName = (nameInput ? nameInput.value : '').trim();
+      const day = parseInt(dayInput ? dayInput.value : '0', 10);
+      const venue = (venueInput ? venueInput.value : '').trim() || 'Banyuwangi';
+      const phone = (phoneInput ? phoneInput.value : '').trim() || '-';
+      const term = termSelect ? termSelect.value : 'DP 30%';
+      const method = methodSelect ? methodSelect.value : 'QRIS';
+      const statusConfirm = statusSelect ? statusSelect.value : 'Sudah Bayar';
+
+      if (!clientName || !day || day < 1 || day > 31) {
+        alert('Mohon isi Nama Pasangan/Wisudawan dan Tanggal Acara (1-31) terlebih dahulu.');
+        return;
+      }
+
+      const pkg = ambilDataPaketAktif();
+      const total = Number(pkg.price || 0);
+      const dpNominal = Math.round(total * 0.3);
+      const nominalBayar = term === 'Lunas 100%' ? total : dpNominal;
+      const sudahBayar = statusConfirm.includes('Sudah Bayar');
+
+      const newBooking = {
+        id: 'BK-' + Date.now(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        client: clientName,
+        clientName: clientName,
+        phone: phone,
+        day: day,
+        date: `${day} Nov 2026`,
+        category: pkg.category || 'Engagement',
+        packageId: pkg.id,
+        packageName: pkg.name,
+        price: total,
+        transport: 0,
+        dp: sudahBayar ? nominalBayar : 0,
+        targetDp: dpNominal,
+        paymentMethod: method,
+        paymentTerm: term,
+        paymentStatus: statusConfirm,
+        status: sudahBayar ? 'DP Masuk' : 'Booking Baru',
+        stage: 'Booking',
+        venue: venue,
+        location: venue,
+        driveLink: '',
+        selectedPhotos: [],
+        crew: [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
+      };
+
+      const btnSubmit = document.querySelector('button[onclick*="submitPublicBooking"]');
+      if (btnSubmit) btnSubmit.innerText = '⏳ Menyimpan ke Server & Membuka WA...';
+
+      try {
+        if (typeof appState !== 'undefined') {
+          appState.bookingFilter = 'All';
+          if (!Array.isArray(appState.bookings)) appState.bookings = [];
+          appState.bookings.unshift(newBooking);
+          localStorage.setItem('filephotoku_std_db_v1', JSON.stringify(appState));
+        }
+
+        // Ambil data server Firebase terbaru lalu gabungkan agar tidak menimpa pesanan lain
+        const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
+        let cloudData = res.ok ? await res.json() : null;
+        if (!cloudData || typeof cloudData !== 'object') {
+          cloudData = typeof appState !== 'undefined' ? JSON.parse(JSON.stringify(appState)) : { bookings: [] };
+        }
+        if (!Array.isArray(cloudData.bookings)) cloudData.bookings = [];
+        cloudData.bookings.unshift(newBooking);
+        delete cloudData.isUnlocked;
+        delete cloudData.activeTab;
+
+        await fetch(`${FP_CLOUD_URL}/studioData.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cloudData)
+        });
+      } catch (err) {
+        console.warn('Gagal sinkron ke Firebase:', err);
+      }
+
+      const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+      const tujuanBayar = method === 'QRIS'
+        ? `QRIS (${REKENING_STUDIO.merchantQris})`
+        : `BSI ${REKENING_STUDIO.nomor} a.n. ${REKENING_STUDIO.atasNama}`;
+
+      const waText =
+        `Halo Admin *FILEPHOTOKU.STD*, saya ingin konfirmasi Booking & Pembayaran:\n\n` +
+        `• *Nama Klien:* ${clientName}\n` +
+        `• *No. WA:* ${phone}\n` +
+        `• *Paket Pilihan:* ${pkg.name}\n` +
+        `• *Tanggal Acara:* Tanggal ${day}\n` +
+        `• *Lokasi Venue:* ${venue}\n` +
+        `• *Harga Paket:* ${formatRp(total)}\n` +
+        `• *Opsi Pembayaran:* ${term} (${formatRp(nominalBayar)})\n` +
+        `• *Metode Transaksi:* *${tujuanBayar}*\n` +
+        `• *Status:* ${statusConfirm}\n\n` +
+        `Berikut saya lampirkan bukti pembayarannya. Terima kasih!`;
+
+      window.location.href = `https://api.whatsapp.com/send?phone=6285708001457&text=${encodeURIComponent(waText)}`;
+    };
+
+    // Perbarui nominal otomatis saat klien mengklik tombol "Pilih Paket Ini" di kartu kiri
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.innerText && e.target.innerText.includes('Pilih Paket Ini')) {
+        setTimeout(hitungDanTampilkanTagihan, 100);
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      pastikanHalamanKlienAktif();
+      setTimeout(pastikanHalamanKlienAktif, 400);
+    });
+
+    setInterval(pastikanHalamanKlienAktif, 1000);
+  </script>
 </body>
 </html>
