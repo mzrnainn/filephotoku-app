@@ -649,7 +649,52 @@
   </div>
 
   <!-- Memanggil Database & Logika Aplikasi Eksternal -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script src="data.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+
+  <!-- PENGUNCI OTOMATIS HALAMAN KLIEN SAAT PERTAMA DIBUKA / REFRESH -->
+  <style>
+    body.public-client-mode #tab-website {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+  </style>
+  <script>
+    function pastikanHalamanKlienMuncul() {
+      // Hanya jalankan jika sedang di Mode Klien (tombol Chat Admin muncul)
+      if (!document.body.classList.contains('public-client-mode')) return;
+
+      const webTab = document.getElementById('tab-website');
+      const sudahTampil = webTab && webTab.offsetHeight > 50;
+
+      if (!sudahTampil) {
+        // 1. Otomatis jalankan fungsi tombol "Lihat Mode Klien (Lock)"
+        const semuaTombol = document.querySelectorAll('button');
+        semuaTombol.forEach(btn => {
+          if (btn.innerText && btn.innerText.includes('Lihat Mode Klien')) {
+            btn.click();
+          }
+        });
+
+        // 2. Paksa buka kontainer #tab-website jika masih tersembunyi
+        if (typeof switchTab === 'function') switchTab('website');
+        if (webTab) {
+          webTab.classList.remove('hidden');
+          webTab.classList.add('active');
+          webTab.style.display = 'block';
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      pastikanHalamanKlienMuncul();
+      setTimeout(pastikanHalamanKlienMuncul, 400);
+      setTimeout(pastikanHalamanKlienMuncul, 1200);
+    });
+
+    // Pantau setiap 1 detik agar tidak kembali kosong setelah sinkronisasi server
+    setInterval(pastikanHalamanKlienMuncul, 1000);
+  </script>
 </body>
 </html>
