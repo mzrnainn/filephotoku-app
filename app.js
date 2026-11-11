@@ -1747,4 +1747,29 @@ window.onload = function() {
     window.syncFromCloud(false);
   }, 10000);
 };
+
+// Otomatis aktifkan halaman klien (#tab-website) saat berada di Mode Klien
+function autoActivateClientMode() {
+  if (document.body.classList.contains('public-client-mode')) {
+    if (typeof appState !== 'undefined') {
+      appState.isUnlocked = false;
+      appState.activeTab = 'website';
+    }
+    if (typeof switchTab === 'function') {
+      switchTab('website');
+    }
+    const webSection = document.getElementById('tab-website');
+    if (webSection) {
+      webSection.classList.add('active');
+      webSection.style.display = 'block';
+    }
+  }
+}
+
+// Jalankan otomatis saat halaman dimuat dan setelah sinkronisasi Firebase selesai
+window.addEventListener('DOMContentLoaded', () => {
+  autoActivateClientMode();
+  setTimeout(autoActivateClientMode, 300);
+  setTimeout(autoActivateClientMode, 1200);
+});
 };

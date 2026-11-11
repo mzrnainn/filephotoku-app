@@ -78,4 +78,15 @@ body:not(.public-client-mode) .public-only-ui {
     box-shadow: none !important;
     border: 1px solid #ccc !important;
   }
+  /* Paksa halaman klien selalu muncul saat Mode Klien aktif */
+body.public-client-mode #tab-website {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Sembunyikan halaman Admin saat Mode Klien aktif */
+body.public-client-mode .tab-section:not(#tab-website) {
+  display: none !important;
+}
 }
