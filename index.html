@@ -1337,5 +1337,147 @@
     setInterval(jagaTampilanKlien, 1200);
     setInterval(tarikDataBookingDariCloud, 7000);
   </script>
+  // Master data lengkap agar Admin tidak pernah kosong saat sinkronisasi server
+    const MASTER_DATA_ADMIN = {
+      pricelist: typeof DAFTAR_PAKET_CADANGAN !== 'undefined' ? DAFTAR_PAKET_CADANGAN : [
+        { id: 'W-01', category: 'Wedding', name: 'WEDDING - SILVER 01', price: 1490000, desc: 'Dokumentasi akad/resepsi lengkap, 1 fotografer, file Google Drive.' },
+        { id: 'W-02', category: 'Wedding', name: 'WEDDING - SILVER 02', price: 1750000, desc: 'Dokumentasi akad & resepsi, 2 fotografer, cetak foto + album.' },
+        { id: 'W-03', category: 'Wedding', name: 'WEDDING - MAGAZINE BOOK 01', price: 2300000, desc: 'Full day coverage, album majalah eksklusif, cinematic video.' },
+        { id: 'W-04', category: 'Wedding', name: 'WEDDING - MAGAZINE BOOK 02', price: 2600000, desc: 'Paket lengkap premium wedding, 2 fotografer, 1 videografer, album eksklusif & video highlight.' },
+        { id: 'E-01', category: 'Engagement', name: 'ENGAGEMENT 01', price: 500000, desc: 'Sesi foto lamaran standar, 1 fotografer, semua file master.' },
+        { id: 'E-02', category: 'Engagement', name: 'ENGAGEMENT 02', price: 650000, desc: 'Sesi foto lamaran + cetak album mini.' },
+        { id: 'E-03', category: 'Engagement', name: 'ENGAGEMENT 03', price: 750000, desc: 'Paket lengkap engagement dengan bonus cetak pigora.' },
+        { id: 'G-01', category: 'Graduation', name: 'GRADUATION - BASIC', price: 299000, desc: 'Sesi foto wisuda individual / couple, durasi 45 menit.' },
+        { id: 'G-02', category: 'Graduation', name: 'GRADUATION - STANDARD', price: 350000, desc: 'Sesi foto wisuda outdoor/studio, bonus cetak 10R + frame.' },
+        { id: 'G-03', category: 'Graduation', name: 'GRADUATION - PREMIUM', price: 500000, desc: 'Paket wisuda lengkap keluarga & teman, semua file edited.' },
+        { id: 'G-04', category: 'Graduation', name: 'GRADUATION - VIDEO ONLY', price: 350000, desc: 'Dokumentasi video cinematic wisuda.' },
+        { id: 'M-01', category: 'Maternity', name: 'MATERNITY - BASIC', price: 350000, desc: '60 Menit sesi foto maternity bersama suami, 20 edited photos.' },
+        { id: 'M-02', category: 'Maternity', name: 'MATERNITY - EXCLUSIVE', price: 550000, desc: '90 Menit sesi foto maternity, cetak 10RS + pigora, video reels.' }
+      ],
+      crewList: [
+        { id: 'C-1', role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', defaultFee: 0 },
+        { id: 'C-2', role: 'Second Shooter', name: 'Freelance Partner', defaultFee: 300000 },
+        { id: 'C-3', role: 'Videografer', name: 'Tim Videografi', defaultFee: 350000 },
+        { id: 'C-4', role: 'Asisten / Lighting', name: 'Asisten Studio', defaultFee: 150000 }
+      ],
+      gearList: [
+        { id: 'GR-1', name: 'Kamera Utama (Mirrorless)', status: 'Tersedia' },
+        { id: 'GR-2', name: 'Lensa 35mm / 50mm Fix', status: 'Tersedia' },
+        { id: 'GR-3', name: 'Flash External + Trigger', status: 'Tersedia' },
+        { id: 'GR-4', name: 'Memory Card #A1 & #A2', status: 'Standby' }
+      ],
+      bookings: [
+        {
+          id: 'BK-1760000001',
+          createdAt: 1760000001000,
+          updatedAt: 1760000001000,
+          client: 'Nain & Nisa',
+          clientName: 'Nain & Nisa',
+          phone: '081234567890',
+          day: 13,
+          date: '13 Nov 2026',
+          category: 'Wedding',
+          packageId: 'W-01',
+          packageName: 'WEDDING - SILVER 01',
+          price: 1490000,
+          transport: 0,
+          dp: 447000,
+          targetDp: 447000,
+          status: 'DP Masuk',
+          stage: 'Booking',
+          venue: 'Labanasem, Banyuwangi',
+          location: 'Labanasem, Banyuwangi',
+          driveLink: '',
+          selectedPhotos: [],
+          addons: [],
+          crew: [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
+        }
+      ]
+    };
+
+    function pulihkanDataDanDropdownAdmin() {
+      if (typeof appState === 'undefined' || !appState) {
+        window.appState = JSON.parse(JSON.stringify(MASTER_DATA_ADMIN));
+      }
+
+      let adaPerubahan = false;
+
+      // 1. Pulihkan Pricelist, Kru, dan Gear jika kosong terhapus sinkronisasi
+      if (!Array.isArray(appState.pricelist) || appState.pricelist.length === 0) {
+        appState.pricelist = JSON.parse(JSON.stringify(MASTER_DATA_ADMIN.pricelist));
+        adaPerubahan = true;
+      }
+      if (!Array.isArray(appState.crewList) || appState.crewList.length === 0) {
+        appState.crewList = JSON.parse(JSON.stringify(MASTER_DATA_ADMIN.crewList));
+        adaPerubahan = true;
+      }
+      if (!Array.isArray(appState.gearList) || appState.gearList.length === 0) {
+        appState.gearList = JSON.parse(JSON.stringify(MASTER_DATA_ADMIN.gearList));
+        adaPerubahan = true;
+      }
+
+      // 2. Pastikan seluruh data booking memiliki struktur lengkap agar tidak membuat render error
+      if (!Array.isArray(appState.bookings) || appState.bookings.length === 0) {
+        appState.bookings = JSON.parse(JSON.stringify(MASTER_DATA_ADMIN.bookings));
+        adaPerubahan = true;
+      } else {
+        appState.bookings = appState.bookings.map((b, idx) => {
+          const nama = b.client || b.clientName || `Klien #${idx + 1}`;
+          const harga = Number(b.price || 500000);
+          return Object.assign({
+            id: b.id || ('BK-' + (1760000000 + idx)),
+            createdAt: b.createdAt || Date.now(),
+            updatedAt: b.updatedAt || Date.now(),
+            client: nama,
+            clientName: nama,
+            phone: b.phone || '-',
+            day: Number(b.day || 15),
+            date: b.date || `${b.day || 15} Nov 2026`,
+            category: b.category || 'Wedding',
+            packageId: b.packageId || 'W-01',
+            packageName: b.packageName || 'WEDDING - SILVER 01',
+            price: harga,
+            transport: Number(b.transport || 0),
+            dp: Number(b.dp || 0),
+            targetDp: Number(b.targetDp || Math.round(harga * 0.3)),
+            status: b.status || 'Booking Baru',
+            stage: b.stage || 'Booking',
+            venue: b.venue || b.location || 'Banyuwangi',
+            location: b.location || b.venue || 'Banyuwangi',
+            driveLink: b.driveLink || '',
+            selectedPhotos: Array.isArray(b.selectedPhotos) ? b.selectedPhotos : [],
+            addons: Array.isArray(b.addons) ? b.addons : [],
+            crew: Array.isArray(b.crew) && b.crew.length > 0
+              ? b.crew
+              : [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
+          }, b, { client: nama, clientName: nama, price: harga });
+        });
+      }
+
+      if (adaPerubahan) {
+        const keyStorage = typeof STORAGE_KEY !== 'undefined' ? STORAGE_KEY : 'filephotoku_std_db_v1';
+        localStorage.setItem(keyStorage, JSON.stringify(appState));
+        if (typeof renderAll === 'function') {
+          try { renderAll(); } catch (e) { console.warn('Render ulang:', e); }
+        }
+      }
+
+      // 3. Paksa isi dropdown di Menu 3 (Invoice Otomatis) jika masih tampak kosong
+      const invTab = document.getElementById('tab-invoice');
+      if (invTab) {
+        const selects = invTab.querySelectorAll('select');
+        if (selects[0] && selects[0].options.length === 0) {
+          selects[0].innerHTML = appState.bookings.map(b =>
+            `<option value="${b.id}">${b.client} — ${b.packageName} (${b.date})</option>`
+          ).join('');
+          selects[0].dispatchEvent(new Event('change'));
+        }
+        if (selects[1] && selects[1].options.length === 0) {
+          selects[1].innerHTML = appState.pricelist.map(p =>
+            `<option value="${p.id}">[${p.category}] ${p.name} — Rp ${Number(p.price).toLocaleString('id-ID')}</option>`
+          ).join('');
+        }
+      }
+    }
 </body>
 </html>
