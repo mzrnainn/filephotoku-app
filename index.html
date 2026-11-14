@@ -729,6 +729,52 @@
     let sedangSinkronCloud = false;
 
     // 1. Penjaga Halaman Klien (TANPA merender ulang QRIS agar tidak kedip-kedip)
+    // Daftar cadangan paket resmi FILEPHOTOKU.STD agar dropdown tidak pernah kosong
+    const DAFTAR_PAKET_CADANGAN = [
+      { id: 'W-01', category: 'Wedding', name: 'WEDDING - SILVER 01', price: 1490000 },
+      { id: 'W-02', category: 'Wedding', name: 'WEDDING - SILVER 02', price: 1750000 },
+      { id: 'W-03', category: 'Wedding', name: 'WEDDING - MAGAZINE BOOK 01', price: 2300000 },
+      { id: 'W-04', category: 'Wedding', name: 'WEDDING - MAGAZINE BOOK 02', price: 2600000 },
+      { id: 'E-01', category: 'Engagement', name: 'ENGAGEMENT 01', price: 500000 },
+      { id: 'E-02', category: 'Engagement', name: 'ENGAGEMENT 02', price: 650000 },
+      { id: 'E-03', category: 'Engagement', name: 'ENGAGEMENT 03', price: 750000 },
+      { id: 'G-01', category: 'Graduation', name: 'GRADUATION - BASIC', price: 299000 },
+      { id: 'G-02', category: 'Graduation', name: 'GRADUATION - STANDARD', price: 350000 },
+      { id: 'G-03', category: 'Graduation', name: 'GRADUATION - PREMIUM', price: 500000 },
+      { id: 'G-04', category: 'Graduation', name: 'GRADUATION - VIDEO ONLY', price: 350000 },
+      { id: 'M-01', category: 'Maternity', name: 'MATERNITY - BASIC', price: 350000 },
+      { id: 'M-02', category: 'Maternity', name: 'MATERNITY - EXCLUSIVE', price: 550000 }
+    ];
+
+    function isiDropdownPaketOtomatis() {
+      const pkgSelect = document.getElementById('pub-package-select');
+      if (!pkgSelect) return;
+
+      // Ambil dari database admin jika tersedia, jika kosong gunakan daftar cadangan
+      const sumberPaket = (typeof appState !== 'undefined' && Array.isArray(appState.pricelist) && appState.pricelist.length > 0)
+        ? appState.pricelist
+        : DAFTAR_PAKET_CADANGAN;
+
+      if (typeof appState !== 'undefined' && (!Array.isArray(appState.pricelist) || appState.pricelist.length === 0)) {
+        appState.pricelist = sumberPaket;
+      }
+
+      // Isi opsi hanya jika dropdown masih kosong (mencegah pilihan klien ter-reset)
+      if (pkgSelect.options.length === 0) {
+        const kategoriList = [...new Set(sumberPaket.map(p => p.category || 'Lainnya'))];
+        pkgSelect.innerHTML = kategoriList.map(kat => {
+          const items = sumberPaket.filter(p => (p.category || 'Lainnya') === kat);
+          const optionsHtml = items.map(p =>
+            `<option value="${p.id}">${p.name} — Rp ${Number(p.price || 0).toLocaleString('id-ID')}</option>`
+          ).join('');
+          return `<optgroup label="${kat.toUpperCase()}">${optionsHtml}</optgroup>`;
+        }).join('');
+
+        if (typeof hitungDanTampilkanTagihan === 'function') {
+          hitungDanTampilkanTagihan();
+        }
+      }
+    }
     function jagaTampilanKlien() {
       if (document.body.classList.contains('public-client-mode')) {
         const webTab = document.getElementById('tab-website');
@@ -1265,6 +1311,16 @@
     document.addEventListener('click', (e) => {
       const txt = (e.target && e.target.innerText) ? e.target.innerText : '';
       if (txt.includes('Pilih Paket Ini')) {
+        const card = e.target.closest('div');
+        const pkgSelect = document.getElementById('pub-package-select');
+        if (card && pkgSelect) {
+          Array.from(pkgSelect.options).forEach(opt => {
+            const namaPaket = opt.text.split('—')[0].trim();
+            if (namaPaket && card.innerText.includes(namaPaket)) {
+              pkgSelect.value = opt.value;
+            }
+          });
+        }
         setTimeout(hitungDanTampilkanTagihan, 100);
       }
       if (txt.includes('Booking & Drive') || txt.includes('Dashboard') || txt.includes('Invoice') || txt.includes('Buka Studio OS')) {
