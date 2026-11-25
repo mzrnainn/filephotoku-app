@@ -1,6 +1,6 @@
 /* ============================================================================
    LOGIKA UTAMA ANTI-CRASH, TANGGAL AKURAT, QRIS & FIREBASE SYNC
-   FILEPHOTOKU.STD Studio OS v5
+   FILEPHOTOKU.STD Studio OS v6 (Anti-Mantul & PIN Aman)
    ============================================================================ */
 
 let appState = null;
@@ -9,6 +9,7 @@ let logoTapCount = 0;
 let logoTapTimer = null;
 let isSyncing = false;
 let searchKeyword = '';
+let localMutationVersion = 0;
 
 const nowInit = new Date();
 let calYear = nowInit.getFullYear();
@@ -166,9 +167,32 @@ function mergeBookings(localArr, cloudArr, deletedIds) {
   return Array.from(map.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
+function sedangMengisiForm() {
+  const aktif = document.activeElement;
+  if (aktif && ['INPUT', 'TEXTAREA', 'SELECT'].includes(aktif.tagName)) return true;
+
+  const modalIds = ['modal-booking', 'modal-admin-login'];
+  if (modalIds.some(id => {
+    const m = document.getElementById(id);
+    return m && !m.classList.contains('hidden');
+  })) return true;
+
+  const draftIds = [
+    'new-pl-name', 'new-pl-price', 'new-pl-desc', 'new-cat-name',
+    'mc-name', 'mc-role', 'mc-fee', 'mg-name',
+    'inv-custom-name', 'inv-custom-price', 'crew-new-role',
+    'pub-client-name', 'pub-client-venue', 'pub-client-phone'
+  ];
+  return draftIds.some(id => {
+    const el = document.getElementById(id);
+    return el && el.value.trim() !== '';
+  });
+}
+
 async function saveState(pushCloud = true) {
+  localMutationVersion++;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-  if (!pushCloud || isSyncing || !FP_CLOUD_URL) return;
+  if (!pushCloud || !FP_CLOUD_URL) return;
   try {
     const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
     const cloud = res.ok ? await res.json() : null;
@@ -193,14 +217,29 @@ async function saveState(pushCloud = true) {
 
 window.syncFromCloud = async function(showNotif = false) {
   if (isSyncing || !FP_CLOUD_URL) return;
+  if (!showNotif && sedangMengisiForm()) return;
+
+  const startVer = localMutationVersion;
   try {
     isSyncing = true;
     const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
     if (!res.ok) return;
     const cloud = await res.json();
+
+    // Batalkan jika user baru saja menyimpan perubahan lokal saat fetch berjalan
+    if (localMutationVersion !== startVer) return;
+
     if (cloud && typeof cloud === 'object') {
       const keepUnlock = appState.isUnlocked;
       const keepTab = appState.activeTab;
+      const keepSubTab = appState.setupSubTab;
+
+      const beforeHash = JSON.stringify({
+        b: appState.bookings, p: appState.pricelist, c: appState.categories,
+        cr: appState.crewList, g: appState.gearList, s: appState.studioInfo,
+        pay: appState.paymentConfig, pin: appState.adminPin
+      });
+
       const allDel = [...new Set([...(appState.deletedBookingIds || []), ...(cloud.deletedBookingIds || [])])];
       const mergedBookings = mergeBookings(appState.bookings, cloud.bookings || [], allDel);
 
@@ -210,9 +249,20 @@ window.syncFromCloud = async function(showNotif = false) {
       }));
       nextState.isUnlocked = keepUnlock;
       nextState.activeTab = keepTab;
+      nextState.setupSubTab = keepSubTab;
+
+      const afterHash = JSON.stringify({
+        b: nextState.bookings, p: nextState.pricelist, c: nextState.categories,
+        cr: nextState.crewList, g: nextState.gearList, s: nextState.studioInfo,
+        pay: nextState.paymentConfig, pin: nextState.adminPin
+      });
+
       appState = nextState;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-      renderAll();
+
+      if (showNotif || (beforeHash !== afterHash && !sedangMengisiForm())) {
+        renderAll();
+      }
       if (showNotif) showToast('Server Tersinkronisasi', `${appState.bookings.length} jadwal booking aktif.`);
     }
   } catch (e) {
@@ -247,7 +297,8 @@ window.closeAdminLoginModal = function() {
 
 window.verifyAdminPin = function() {
   const val = (document.getElementById('admin-pin-input').value || '').trim();
-  if (val === String(appState.adminPin || '2026') || val === '2026' || val === '998877') {
+  const pinResmi = String(appState.adminPin || '998877');
+  if (val === pinResmi) {
     appState.isUnlocked = true;
     appState.activeTab = 'dashboard';
     document.body.classList.remove('public-client-mode');
@@ -257,7 +308,7 @@ window.verifyAdminPin = function() {
     renderAll();
     showToast('Mode Admin Aktif!', 'Selamat bekerja di FILEPHOTOKU.STD Studio OS.');
   } else {
-    alert('PIN salah! PIN default adalah 2026.');
+    alert('PIN salah. Akses ditolak.');
   }
 };
 
@@ -1388,7 +1439,7 @@ window.deleteMasterGear = function(id) {
 };
 window.saveStudioProfile = function() {
   appState.studioInfo.phone = document.getElementById('pf-wa').value.trim() || '6285708001457';
-  appState.adminPin = document.getElementById('pf-pin').value.trim() || '2026';
+  appState.adminPin = document.getElementById('pf-pin').value.trim() || appState.adminPin || '998877';
   appState.paymentConfig.bank = document.getElementById('pf-bank').value.trim();
   appState.paymentConfig.accountNumber = document.getElementById('pf-norek').value.trim();
   appState.paymentConfig.accountHolder = document.getElementById('pf-an').value.trim();
