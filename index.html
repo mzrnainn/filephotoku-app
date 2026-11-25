@@ -11,7 +11,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <script>
@@ -55,39 +55,68 @@
 
     /* Cegah input/select melebar di layar iPhone */
     input, select, textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      min-height: 42px;
+      box-sizing: border-box !important;
+      overflow: hidden;
+      text-align: left;
+    }
+    input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+    .grid > div { min-width: 0; }
 
-    /* Fix khusus input tanggal di iPhone agar pas di dalam kotak & rata kiri */
-input[type="date"] {
-  -webkit-appearance: none;
-  appearance: none;
-  display: block;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  min-height: 42px;
-  box-sizing: border-box !important;
-  overflow: hidden;
-  text-align: left;
-}
-input[type="date"]::-webkit-date-and-time-value {
-  text-align: left;
-}
-.grid > div {
-  min-width: 0;
-}
-
-    /* Cetak PDF bersih khusus area Invoice */
+    /* ============================================================
+       CETAK PDF INVOICE PENUH 1 HALAMAN A4 (BERSIH DI IPHONE & PC)
+       ============================================================ */
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
     @media print {
-      body * { visibility: hidden !important; }
-      #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
-      #invoice-print-area {
-        position: fixed !important;
-        inset: 0 !important;
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      html, body {
         width: 100% !important;
-        background: #fff !important;
-        padding: 20px !important;
-        border: none !important;
+        max-width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        display: block !important;
+        overflow: visible !important;
+      }
+      aside, header, nav, #toast-box, #modal-admin-login, #modal-booking, #modal-proof,
+      .tab-section:not(#tab-invoice),
+      #invoice-toolbar,
+      #invoice-editor-col,
+      .no-print {
+        display: none !important;
+      }
+      #main-wrapper, main, #tab-invoice, #invoice-layout-grid {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      #invoice-print-area {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border: 1px solid #E6D5C3 !important;
+        border-radius: 16px !important;
         box-shadow: none !important;
+        background: #ffffff !important;
+        overflow: hidden !important;
       }
     }
   </style>
@@ -105,7 +134,7 @@ input[type="date"]::-webkit-date-and-time-value {
         <h2 class="font-editorial text-xl font-bold text-espresso mt-1">PIN Admin FILEPHOTOKU.STD</h2>
       </div>
       <div class="space-y-3">
-        <input id="admin-pin-input" type="password" inputmode="numeric" placeholder="Masukkan PIN (*******)" onkeydown="if(event.key==='Enter') verifyAdminPin()" class="w-full px-4 py-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-center text-base font-bold tracking-widest text-espresso focus:outline-none" />
+        <input id="admin-pin-input" type="password" inputmode="numeric" placeholder="••••••••" onkeydown="if(event.key==='Enter') verifyAdminPin()" class="w-full px-4 py-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-center text-base font-bold tracking-widest text-espresso focus:outline-none" />
         <button type="button" onclick="verifyAdminPin()" class="w-full py-3 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shadow">Buka Studio OS →</button>
       </div>
       <button type="button" onclick="closeAdminLoginModal()" class="text-xs text-espressoMuted font-semibold">Batal</button>
@@ -171,7 +200,7 @@ input[type="date"]::-webkit-date-and-time-value {
     </div>
   </div>
 
-  <!-- MODAL LIHAT FOTO BUKTI BAYAR (AMAN DI SAFARI IPHONE) -->
+  <!-- MODAL LIHAT FOTO BUKTI BAYAR -->
   <div id="modal-proof" class="fixed inset-0 z-50 hidden bg-black/75 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-3 text-center">
       <div class="flex items-center justify-between">
@@ -189,7 +218,7 @@ input[type="date"]::-webkit-date-and-time-value {
       <div onclick="switchTab('dashboard')" class="cursor-pointer rounded-2xl p-4 shadow-md border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
         <div class="text-white tracking-wider text-base flex items-center justify-between">
           <div><span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-semibold text-[#FF6B00] text-xs">.STD</span></div>
-          <span class="text-[#FF6B00] font-bold">✳</span>
+          <svg class="w-4 h-4 text-[#FF6B00]" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="19.8" y1="7.5" x2="4.2" y2="16.5"/></g></svg>
         </div>
         <div class="text-[8px] tracking-[0.2em] uppercase text-white/80 mt-1">CAPTURE YOUR STORY</div>
       </div>
@@ -215,7 +244,7 @@ input[type="date"]::-webkit-date-and-time-value {
   </aside>
 
   <!-- KONTEN UTAMA -->
-  <div class="flex-1 flex flex-col min-w-0 w-full pb-24 lg:pb-10">
+  <div id="main-wrapper" class="flex-1 flex flex-col min-w-0 w-full pb-24 lg:pb-10">
     <!-- HEADER -->
     <header class="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-[#E6D5C3] px-3 sm:px-6 py-2.5 w-full">
       <div class="max-w-7xl mx-auto space-y-2">
@@ -228,7 +257,7 @@ input[type="date"]::-webkit-date-and-time-value {
               </div>
               <div class="text-[7px] tracking-[0.14em] text-white/80 uppercase mt-0.5">CAPTURE YOUR STORY</div>
             </div>
-            <span class="text-[#FF6B00] font-bold text-sm">✳</span>
+            <svg class="w-3.5 h-3.5 text-[#FF6B00]" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="19.8" y1="7.5" x2="4.2" y2="16.5"/></g></svg>
           </div>
 
           <div class="public-only-ui flex items-center gap-1.5">
@@ -300,13 +329,11 @@ input[type="date"]::-webkit-date-and-time-value {
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <!-- Pelacak Progres -->
           <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3">
             <h2 class="font-editorial text-lg font-bold text-espresso">Pelacak Progres File Preview (1–3 Hari) & Edit (3–7 Hari)</h2>
             <div id="dash-progress-list" class="space-y-2.5"></div>
           </div>
 
-          <!-- Kalender Dinamis -->
           <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3">
             <div class="flex items-center justify-between gap-2">
               <h2 id="cal-month-label" class="font-editorial text-lg font-bold text-espresso">Kalender</h2>
@@ -342,33 +369,35 @@ input[type="date"]::-webkit-date-and-time-value {
       </section>
 
       <!-- =========================================================
-           TAB 3: GENERATOR INVOICE RESMI
+           TAB 3: GENERATOR INVOICE RESMI (DESAIN BARU FULL A4 + LOGO)
            ========================================================= -->
       <section id="tab-invoice" class="tab-section space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
+        <div id="invoice-toolbar" class="flex flex-wrap items-center justify-between gap-2">
           <h1 class="font-editorial text-2xl font-bold text-espresso">Generator Invoice Resmi</h1>
           <div class="flex items-center gap-2">
             <button type="button" onclick="sendInvoiceWA()" class="px-3.5 py-2 rounded-xl bg-sage text-white text-xs font-bold shadow">📲 Kirim WA</button>
-            <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-[#0B1F29] text-white text-xs font-bold shadow">🖨️ Cetak PDF</button>
+            <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-[#0B0D0E] text-white text-xs font-bold shadow">🖨️ Cetak PDF</button>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          <div class="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+        <div id="invoice-layout-grid" class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <!-- KOLOM EDITOR INVOICE (OTOMATIS HILANG SAAT CETAK PDF) -->
+          <div id="invoice-editor-col" class="lg:col-span-4 bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
             <div>
               <label class="font-bold text-espresso uppercase block mb-1">Pilih Klien / Jadwal</label>
               <select id="inv-booking-select" onchange="selectInvoiceBooking()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold"></select>
             </div>
             <div>
               <label class="font-bold text-espresso uppercase block mb-1">Tambah Paket / Add-On Resmi</label>
-              <div class="flex flex-col sm:flex-row gap-2">
-                <select id="inv-pkg-select" class="flex-1 px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]"></select>
-                <button type="button" onclick="addInvoicePackageItem()" class="px-4 py-2.5 rounded-xl bg-terracotta text-white font-bold shrink-0">＋ Paket</button>
+              <div class="flex flex-col gap-2">
+                <select id="inv-pkg-select" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]"></select>
+                <button type="button" onclick="addInvoicePackageItem()" class="w-full py-2.5 rounded-xl bg-terracotta text-white font-bold">＋ Tambah Paket & Fasilitas</button>
               </div>
             </div>
             <div class="pt-2 border-t border-[#EFE2D3] space-y-2">
               <label class="font-bold text-espresso uppercase block">Tambah Item Kustom</label>
-              <input id="inv-custom-name" type="text" placeholder="Mis: Transport Luar Kota" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+              <input id="inv-custom-name" type="text" placeholder="Nama item (mis: Cetak 10RS + Frame)" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+              <input id="inv-custom-desc" type="text" placeholder="Keterangan tambahan (opsional)" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
               <div class="flex gap-2">
                 <input id="inv-custom-price" type="number" placeholder="Harga (Rp)" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono" />
                 <button type="button" onclick="addInvoiceCustomItem()" class="px-4 py-2 rounded-xl bg-beige text-espresso font-bold shrink-0">＋ Item</button>
@@ -376,49 +405,126 @@ input[type="date"]::-webkit-date-and-time-value {
             </div>
             <div class="pt-2 border-t border-[#EFE2D3] space-y-2">
               <div class="flex items-center justify-between">
-                <label class="font-bold text-espresso uppercase">DP Diterima (Rp)</label>
-                <div class="flex gap-1.5">
+                <label class="font-bold text-espresso uppercase">DP / Pembayaran Masuk (Rp)</label>
+                <div class="flex gap-2">
                   <button type="button" onclick="setInvoiceDpPercent(30)" class="text-[11px] font-bold text-terracotta underline">Set 30%</button>
                   <button type="button" onclick="setInvoiceDpPercent(100)" class="text-[11px] font-bold text-sage underline">Set Lunas</button>
                 </div>
               </div>
               <input id="inv-dp-input" type="number" oninput="updateInvoiceDp(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" />
             </div>
+            <p class="text-[11px] text-espressoMuted bg-cream p-2.5 rounded-xl border border-[#E6D5C3]">
+              💡 <strong>Tips:</strong> Klik ikon <b>✏️</b> di sebelah kanan item pada pratinjau invoice untuk mengubah/menambah keterangan fasilitas (misal cetak 10RS) khusus untuk klien ini.
+            </p>
           </div>
 
-          <!-- Area Cetak Invoice -->
-          <div id="invoice-print-area" class="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border-2 border-[#DEC9B5] space-y-4">
-            <div class="flex items-start justify-between border-b-2 border-[#0B1F29] pb-3 gap-2">
-              <div>
-                <div class="font-editorial text-xl font-bold text-espresso">FILEPHOTOKU.STD <span class="text-[#FF6B00]">✳</span></div>
-                <div class="text-[11px] text-espressoMuted">Banyuwangi • WA: 085708001457 • IG: @filephotoku</div>
+          <!-- LEMBAR CETAK INVOICE RESMI (100% PENUH SAAT CETAK PDF) -->
+          <div id="invoice-print-area" class="lg:col-span-8 bg-white rounded-3xl border border-[#DEC9B5] shadow-md overflow-hidden">
+            <!-- BANNER HEADER HITAM + LOGO RESMI FILEPHOTOKU -->
+            <div class="bg-[#0A0A0A] text-white px-6 sm:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-4 border-[#FF6B00]">
+              <div class="space-y-1.5">
+                <!-- Logo Vektor Presisi Sesuai FEED TUNANGAN.png -->
+                <div class="inline-flex flex-col select-none">
+                  <div class="text-2xl sm:text-[26px] tracking-[0.04em] leading-none font-sans">
+                    <span class="font-extrabold text-white">FILE</span><span class="font-light text-white">PHOTOKU</span>
+                  </div>
+                  <div class="flex items-center gap-5 mt-1.5">
+                    <div class="text-[8.5px] sm:text-[9px] leading-[1.2] tracking-[0.16em] font-normal text-white/90 uppercase">
+                      CAPTURE YOUR<br/>STORY
+                    </div>
+                    <svg class="w-6 h-6 text-[#FF6B00] shrink-0" viewBox="0 0 32 32" fill="none" aria-label="Logo Bintang FILEPHOTOKU">
+                      <g stroke="currentColor" stroke-width="3.6" stroke-linecap="round">
+                        <line x1="16" y1="4" x2="16" y2="28"/>
+                        <line x1="5.6" y1="10" x2="26.4" y2="22"/>
+                        <line x1="26.4" y1="10" x2="5.6" y2="22"/>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+                <div class="text-[11px] text-white/70 pt-1">
+                  Banyuwangi, Jawa Timur • WA: 0857-0800-1457 • IG: @filephotoku
+                </div>
               </div>
-              <div class="text-right">
-                <div class="text-[10px] font-bold uppercase text-terracotta">INVOICE RESMI</div>
-                <div id="inv-preview-no" class="font-mono text-xs font-bold text-espresso">#INV-000000</div>
+
+              <div class="sm:text-right space-y-1.5">
+                <div class="text-[10px] font-bold tracking-[0.22em] uppercase text-[#FF6B00]">OFFICIAL INVOICE</div>
+                <div id="inv-preview-no" class="font-mono text-lg sm:text-xl font-extrabold text-white tracking-wide">#INV-000000</div>
+                <div class="flex sm:justify-end items-center gap-2 pt-0.5">
+                  <span id="inv-preview-status" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40">DP MASUK</span>
+                </div>
+                <div id="inv-preview-issued" class="text-[10px] text-white/60">Terbit: -</div>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-cream p-3.5 rounded-2xl border border-[#E6D5C3]">
-              <div><span class="text-espressoMuted">Klien:</span> <strong id="inv-preview-client" class="text-espresso">-</strong></div>
-              <div><span class="text-espressoMuted">Tanggal:</span> <strong id="inv-preview-date" class="text-espresso">-</strong></div>
-              <div class="sm:col-span-2"><span class="text-espressoMuted">Lokasi & Paket:</span> <strong id="inv-preview-meta" class="text-espresso">-</strong></div>
-            </div>
-
-            <div id="inv-preview-items" class="space-y-2 text-xs"></div>
-
-            <div class="border-t border-[#E6D5C3] pt-3 space-y-1.5 text-xs">
-              <div class="flex justify-between"><span>Total Paket & Add-On</span><strong id="inv-preview-total" class="font-mono">Rp 0</strong></div>
-              <div class="flex justify-between text-sage"><span>DP / Pembayaran Diterima</span><strong id="inv-preview-dp" class="font-mono">Rp 0</strong></div>
-              <div class="flex justify-between text-sm font-extrabold text-terracotta pt-1 border-t border-dashed border-[#DEC9B5]">
-                <span>Sisa Pelunasan</span><span id="inv-preview-sisa" class="font-mono">Rp 0</span>
+            <!-- ISI DOKUMEN INVOICE -->
+            <div class="p-6 sm:p-8 space-y-6">
+              <!-- INFO KLIEN & DETAIL ACARA -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#FAF3EB] border border-[#E6D5C3] rounded-2xl p-4 sm:p-5 text-xs">
+                <div class="space-y-1">
+                  <div class="text-[10px] font-extrabold uppercase tracking-wider text-terracotta">Ditagihkan Kepada</div>
+                  <div id="inv-preview-client" class="font-editorial text-base font-bold text-espresso">-</div>
+                  <div id="inv-preview-phone" class="text-espressoMuted font-mono text-[11px]">WA: -</div>
+                </div>
+                <div class="space-y-1 sm:text-right sm:border-l sm:border-[#E6D5C3] sm:pl-4">
+                  <div class="text-[10px] font-extrabold uppercase tracking-wider text-terracotta">Detail Jadwal & Layanan</div>
+                  <div id="inv-preview-date" class="font-bold text-espresso text-sm">-</div>
+                  <div id="inv-preview-venue" class="text-espressoMuted text-[11px]">-</div>
+                  <div id="inv-preview-category" class="inline-block mt-0.5 px-2 py-0.5 rounded bg-white border border-[#DEC9B5] text-[10px] font-bold text-espresso">-</div>
+                </div>
               </div>
-            </div>
 
-            <div id="inv-preview-bank" class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] text-[11px] text-espresso"></div>
+              <!-- TABEL RINCIAN PAKET & FASILITAS YANG DIDAPATKAN -->
+              <div class="border border-[#E6D5C3] rounded-2xl overflow-hidden">
+                <div class="bg-[#2B1B12] text-white px-4 py-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
+                  <span>Paket & Fasilitas yang Didapatkan</span>
+                  <span>Biaya</span>
+                </div>
+                <div id="inv-preview-items" class="divide-y divide-[#EFE2D3] bg-white"></div>
+              </div>
 
-            <div class="p-3 rounded-2xl bg-amberLight/60 border border-amberWarn/30 text-[11px] text-espresso leading-relaxed">
-              <strong>Ketentuan FILEPHOTOKU.STD:</strong> DP minimal 30% untuk mengunci jadwal, pelunasan maksimal setelah acara selesai, file preview dikirim 1–3 hari & hasil edit 3–7 hari kerja via Google Drive. Reschedule maksimal H-3.
+              <!-- RINGKASAN TAGIHAN + INFO PEMBAYARAN -->
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+                <!-- Rekening & Ketentuan -->
+                <div class="sm:col-span-7 space-y-3">
+                  <div class="p-4 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-1.5 text-[11px]">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-terracotta">Metode Pembayaran Resmi</div>
+                    <div id="inv-preview-bank" class="text-espresso leading-relaxed"></div>
+                    <div id="inv-preview-qris" class="text-espressoMuted text-[10px]"></div>
+                  </div>
+                  <div class="p-4 rounded-2xl bg-amberLight/50 border border-amberWarn/30 text-[11px] text-espresso leading-relaxed">
+                    <div class="font-bold text-espresso mb-1">Syarat & Ketentuan FILEPHOTOKU:</div>
+                    <ul class="list-disc pl-4 space-y-0.5 text-[10.5px] text-espressoMuted">
+                      <li>DP minimal <strong>30%</strong> untuk mengunci tanggal & slot jadwal.</li>
+                      <li>Pelunasan dilakukan maksimal setelah sesi / acara selesai.</li>
+                      <li>File preview dikirim <strong>1–3 hari</strong> & hasil edit <strong>3–7 hari kerja</strong> via Google Drive.</li>
+                      <li>Perubahan jadwal (<em>reschedule</em>) maksimal <strong>H-3</strong> sebelum acara.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Ringkasan Nominal -->
+                <div class="sm:col-span-5 bg-[#FAF3EB] border-2 border-[#DEC9B5] rounded-2xl p-4 space-y-2.5 text-xs">
+                  <div class="text-[10px] font-extrabold uppercase tracking-wider text-espressoMuted border-b border-[#E6D5C3] pb-1.5">Ringkasan Pembayaran</div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-espressoMuted">Total Paket & Add-On</span>
+                    <strong id="inv-preview-total" class="font-mono text-espresso">Rp 0</strong>
+                  </div>
+                  <div class="flex justify-between items-center text-sage">
+                    <span>DP / Pembayaran Masuk</span>
+                    <strong id="inv-preview-dp" class="font-mono">Rp 0</strong>
+                  </div>
+                  <div class="pt-2.5 border-t border-dashed border-[#CBB49D] flex justify-between items-center">
+                    <span class="font-extrabold text-espresso uppercase text-[11px]">Sisa Pelunasan</span>
+                    <span id="inv-preview-sisa" class="font-mono text-base font-extrabold text-terracotta">Rp 0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- FOOTER TERIMA KASIH -->
+              <div class="pt-4 border-t border-[#EFE2D3] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10.5px] text-espressoMuted">
+                <span>Terima kasih telah mempercayakan momen berharga Anda bersama <strong class="text-espresso">FILEPHOTOKU</strong>.</span>
+                <span class="font-mono text-[10px]">Invoice ini sah & diterbitkan secara digital.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -516,7 +622,7 @@ input[type="date"]::-webkit-date-and-time-value {
       <section id="tab-setup" class="tab-section space-y-4">
         <div class="rounded-3xl p-5 text-white shadow-lg" style="background: linear-gradient(135deg, #091B24 0%, #143642 100%);">
           <h1 class="font-editorial text-2xl font-bold">Master Data & Pricelist FILEPHOTOKU.STD</h1>
-          <p class="text-xs text-[#CDE0E8] mt-1">Ubah harga paket, tambah kru, alat, rekening, atau backup data antar perangkat.</p>
+          <p class="text-xs text-[#CDE0E8] mt-1">Ubah harga paket, rincian fasilitas, kru, alat, rekening, atau backup data antar perangkat.</p>
           <div class="flex flex-wrap gap-2 mt-3">
             <button type="button" onclick="exportBackupJSON()" class="px-3.5 py-2 rounded-xl bg-sage text-white text-xs font-bold">💾 Backup (.JSON)</button>
             <label class="px-3.5 py-2 rounded-xl bg-[#FF6B00] text-white text-xs font-bold cursor-pointer">
@@ -549,7 +655,6 @@ input[type="date"]::-webkit-date-and-time-value {
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <!-- KOLOM KIRI: KATEGORI, KATALOG PAKET, ALUR & SIMULASI BUNDLING -->
           <div class="lg:col-span-7 space-y-5">
             <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-sm space-y-4">
               <div>
@@ -561,7 +666,6 @@ input[type="date"]::-webkit-date-and-time-value {
                 <div id="public-catalog-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2"></div>
               </div>
 
-              <!-- Alur & Ketentuan -->
               <div class="pt-4 border-t border-[#E6D5C3] space-y-3">
                 <span class="text-[11px] font-bold uppercase text-terracotta">2. Alur Booking & Transaksi Resmi</span>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -589,7 +693,6 @@ input[type="date"]::-webkit-date-and-time-value {
               </div>
             </div>
 
-            <!-- Simulasi Paket Bundling Rekanan Vendor Banyuwangi -->
             <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-sm space-y-3 text-xs">
               <div>
                 <span class="text-[10px] font-bold uppercase text-terracotta">ESTIMASI BIAYA ACARA</span>
@@ -613,7 +716,6 @@ input[type="date"]::-webkit-date-and-time-value {
             </div>
           </div>
 
-          <!-- KOLOM KANAN: FORMULIR BOOKING & TRANSAKSI QRIS/BSI -->
           <div id="booking-form-card" class="lg:col-span-5 bg-white rounded-3xl border-2 border-[#DEC9B5] p-5 sm:p-6 shadow-md space-y-4">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-sage">Respon Cepat via WhatsApp</span>
@@ -662,7 +764,6 @@ input[type="date"]::-webkit-date-and-time-value {
                 </div>
               </div>
 
-              <!-- Kotak QRIS / BSI Anti-Kedip -->
               <div id="pub-payment-instruction" class="p-3.5 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2"></div>
 
               <div>
@@ -694,7 +795,6 @@ input[type="date"]::-webkit-date-and-time-value {
           </div>
         </div>
 
-        <!-- Pintu Login Owner Privasi di Paling Bawah -->
         <div class="public-only-ui text-center pt-4 pb-6">
           <button type="button" onclick="openAdminLoginModal()" class="text-xs text-espressoMuted/70 hover:text-espresso inline-flex items-center gap-1">
             🔒 Owner Studio Login
@@ -720,8 +820,7 @@ input[type="date"]::-webkit-date-and-time-value {
     <p id="toast-message" class="text-[11px] text-[#CDE0E8] mt-0.5"></p>
   </div>
 
-  <!-- ?v=5 memaksa browser iPhone/Chrome membuang cache file lama -->
-  <script src="data.js?v=6"></script>
-<script src="app.js?v=6"></script>
+  <script src="data.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

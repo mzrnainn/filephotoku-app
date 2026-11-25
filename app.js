@@ -1,6 +1,6 @@
 /* ============================================================================
-   LOGIKA UTAMA ANTI-CRASH, TANGGAL AKURAT, QRIS & FIREBASE SYNC
-   FILEPHOTOKU.STD Studio OS v6 (Anti-Mantul & PIN Aman)
+   LOGIKA UTAMA ANTI-CRASH, ANTI-MANTUL, INVOICE FULL A4 + FASILITAS PAKET
+   FILEPHOTOKU.STD Studio OS v7
    ============================================================================ */
 
 let appState = null;
@@ -13,7 +13,7 @@ let localMutationVersion = 0;
 
 const nowInit = new Date();
 let calYear = nowInit.getFullYear();
-let calMonth = nowInit.getMonth(); // 0-11
+let calMonth = nowInit.getMonth();
 
 const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const BULAN_SINGKAT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -51,6 +51,18 @@ function formatTanggalIndo(iso) {
   return `${d} ${BULAN_SINGKAT[m - 1] || ''} ${y}`;
 }
 
+function findPackageDesc(itemName, fallbackPkgId = '') {
+  const sourceList = (appState && Array.isArray(appState.pricelist) && appState.pricelist.length)
+    ? appState.pricelist
+    : (typeof DEFAULT_STATE !== 'undefined' ? DEFAULT_STATE.pricelist : []);
+  const norm = String(itemName || '').trim().toLowerCase();
+  let found = sourceList.find(p => String(p.name || '').trim().toLowerCase() === norm);
+  if (!found && fallbackPkgId) {
+    found = sourceList.find(p => String(p.id) === String(fallbackPkgId));
+  }
+  return found && found.desc ? String(found.desc).trim() : '';
+}
+
 function showToast(title, msg) {
   const box = document.getElementById('toast-box');
   if (!box) return;
@@ -61,13 +73,15 @@ function showToast(title, msg) {
   window._toastT = setTimeout(() => box.classList.add('hidden'), 3200);
 }
 
-// --- NORMALISASI / SANITIZER DATA (MENCEGAH CRASH) ---
+// --- NORMALISASI / SANITIZER DATA ---
 function sanitizeBooking(b, idx = 0) {
   const item = (b && typeof b === 'object') ? b : {};
   const client = String(item.client || item.clientName || `Klien #${idx + 1}`).trim();
   const price = Number(item.price) || 0;
   const dp = Number(item.dp) || 0;
   const dateISO = normalizeDateISO(item);
+  const pkgId = item.packageId || 'W-01';
+  const pkgName = item.packageName || 'WEDDING - SILVER 01';
 
   let photos = [];
   if (Array.isArray(item.selectedPhotos)) {
@@ -85,8 +99,14 @@ function sanitizeBooking(b, idx = 0) {
     : [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }];
 
   let invoiceItems = Array.isArray(item.invoiceItems) && item.invoiceItems.length > 0
-    ? item.invoiceItems.map(it => ({ name: String(it.name || 'Item'), price: Number(it.price) || 0 }))
-    : [{ name: item.packageName || 'Paket Dokumentasi', price }];
+    ? item.invoiceItems.map(it => {
+        const nm = String(it.name || 'Item');
+        const desc = (it.desc !== undefined && String(it.desc).trim() !== '')
+          ? String(it.desc).trim()
+          : findPackageDesc(nm, pkgId);
+        return { name: nm, price: Number(it.price) || 0, desc };
+      })
+    : [{ name: pkgName, price, desc: findPackageDesc(pkgName, pkgId) }];
 
   return {
     id: String(item.id || ('BK-' + (Date.now() + idx))),
@@ -99,8 +119,8 @@ function sanitizeBooking(b, idx = 0) {
     day: parseInt(dateISO.split('-')[2], 10) || 1,
     date: formatTanggalIndo(dateISO),
     category: item.category || 'Wedding',
-    packageId: item.packageId || 'W-01',
-    packageName: item.packageName || 'WEDDING - SILVER 01',
+    packageId: pkgId,
+    packageName: pkgName,
     price,
     dp,
     paymentMethod: item.paymentMethod || 'QRIS',
@@ -180,7 +200,7 @@ function sedangMengisiForm() {
   const draftIds = [
     'new-pl-name', 'new-pl-price', 'new-pl-desc', 'new-cat-name',
     'mc-name', 'mc-role', 'mc-fee', 'mg-name',
-    'inv-custom-name', 'inv-custom-price', 'crew-new-role',
+    'inv-custom-name', 'inv-custom-desc', 'inv-custom-price', 'crew-new-role',
     'pub-client-name', 'pub-client-venue', 'pub-client-phone'
   ];
   return draftIds.some(id => {
@@ -225,8 +245,6 @@ window.syncFromCloud = async function(showNotif = false) {
     const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
     if (!res.ok) return;
     const cloud = await res.json();
-
-    // Batalkan jika user baru saja menyimpan perubahan lokal saat fetch berjalan
     if (localMutationVersion !== startVer) return;
 
     if (cloud && typeof cloud === 'object') {
@@ -349,7 +367,7 @@ window.doAdminSearch = function(goToBooking = false) {
   }
 };
 
-// --- RENDER MASTER (DILINDUNGI TRY/CATCH PER MODUL) ---
+// --- RENDER MASTER ---
 function renderAll() {
   const tasks = [
     renderPublicWebsite,
@@ -374,7 +392,6 @@ function renderPublicWebsite() {
     appState.publicCategory = mainCats[0] || 'Wedding';
   }
 
-  // 1. Tombol kategori
   const btnWrap = document.getElementById('pub-service-buttons');
   if (btnWrap) {
     btnWrap.innerHTML = mainCats.map(cat => {
@@ -383,7 +400,6 @@ function renderPublicWebsite() {
     }).join('');
   }
 
-  // 2. Kartu paket sesuai kategori aktif
   const cardWrap = document.getElementById('public-catalog-cards');
   if (cardWrap) {
     const pkgs = appState.pricelist.filter(p => p.category === appState.publicCategory);
@@ -402,7 +418,6 @@ function renderPublicWebsite() {
     `).join('') : '<p class="text-xs text-espressoMuted">Belum ada paket pada kategori ini.</p>';
   }
 
-  // 3. Dropdown Paket Pilihan di Formulir Booking
   const pkgSelect = document.getElementById('pub-package-select');
   if (pkgSelect) {
     const prevVal = pkgSelect.value;
@@ -419,7 +434,6 @@ function renderPublicWebsite() {
     }
   }
 
-  // Default tanggal hari ini agar user mudah ubah bulan & tanggal
   const dateInp = document.getElementById('pub-client-date');
   if (dateInp && !dateInp.value) dateInp.value = todayISO();
 
@@ -561,7 +575,8 @@ window.submitPublicBooking = async function() {
     paymentMethod: method,
     paymentTerm: term,
     venue,
-    proofImage: proofUploadBase64
+    proofImage: proofUploadBase64,
+    invoiceItems: [{ name: pkg.name, price, desc: pkg.desc || '' }]
   });
 
   const btn = document.getElementById('btn-submit-public');
@@ -607,7 +622,6 @@ window.submitPublicBooking = async function() {
   window.open(waUrl, '_blank');
 };
 
-// Simulasi Bundling
 function renderBundlingSection() {
   const sel = document.getElementById('bundling-pkg-select');
   const wrap = document.getElementById('bundling-addons-list');
@@ -678,7 +692,6 @@ function renderDashboard() {
   document.getElementById('dash-omzet').textContent = rp(totalOmzet);
   document.getElementById('dash-profit').textContent = rp(totalOmzet - totalFee);
 
-  // Pelacak Progres
   const progEl = document.getElementById('dash-progress-list');
   progEl.innerHTML = appState.bookings.length ? appState.bookings.slice(0, 8).map(b => `
     <div class="p-3 rounded-2xl bg-cream border border-[#E6D5C3] flex items-center justify-between gap-2 text-xs">
@@ -722,7 +735,7 @@ window.remindUnpaidWA = function() {
 function renderDynamicCalendar() {
   document.getElementById('cal-month-label').textContent = `Kalender ${BULAN_ID[calMonth]} ${calYear}`;
   const grid = document.getElementById('dash-calendar-grid');
-  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Min, 1=Sen
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const ymPrefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-`;
@@ -897,7 +910,7 @@ window.saveAdminBooking = async function() {
   const dateISO = document.getElementById('bk-date').value;
   const category = document.getElementById('bk-category').value;
   const pkgId = document.getElementById('bk-package').value;
-  const pkg = appState.pricelist.find(p => p.id === pkgId) || { id: pkgId, name: category, price: 0 };
+  const pkg = appState.pricelist.find(p => p.id === pkgId) || { id: pkgId, name: category, price: 0, desc: '' };
   const venue = (document.getElementById('bk-venue').value || '').trim() || 'Banyuwangi';
   const phone = (document.getElementById('bk-phone').value || '').trim() || '-';
   const driveLink = (document.getElementById('bk-drive').value || '').trim();
@@ -912,9 +925,12 @@ window.saveAdminBooking = async function() {
   if (editId) {
     const idx = appState.bookings.findIndex(b => b.id === editId);
     if (idx !== -1) {
-      appState.bookings[idx] = sanitizeBooking(Object.assign({}, appState.bookings[idx], {
+      const old = appState.bookings[idx];
+      const pkgChanged = old.packageId !== pkg.id;
+      appState.bookings[idx] = sanitizeBooking(Object.assign({}, old, {
         client, dateISO, category, packageId: pkg.id, packageName: pkg.name,
-        venue, phone, driveLink, price, dp, updatedAt: Date.now()
+        venue, phone, driveLink, price, dp, updatedAt: Date.now(),
+        invoiceItems: pkgChanged ? [{ name: pkg.name, price, desc: pkg.desc || '' }] : old.invoiceItems
       }));
     }
   } else {
@@ -923,7 +939,8 @@ window.saveAdminBooking = async function() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       client, dateISO, category, packageId: pkg.id, packageName: pkg.name,
-      venue, phone, driveLink, price, dp
+      venue, phone, driveLink, price, dp,
+      invoiceItems: [{ name: pkg.name, price, desc: pkg.desc || '' }]
     }));
   }
 
@@ -979,7 +996,7 @@ window.closeProofModal = function() {
 };
 
 // ============================================================================
-// 4. GENERATOR INVOICE RESMI
+// 4. GENERATOR INVOICE RESMI (FULL A4 + FASILITAS PAKET OTOMATIS)
 // ============================================================================
 function getActiveInvoiceBooking() {
   if (!appState.bookings.length) return null;
@@ -1007,28 +1024,70 @@ function renderInvoice() {
   const total = bk.invoiceItems.reduce((s, it) => s + (Number(it.price) || 0), 0);
   bk.price = total;
   const sisa = Math.max(0, total - bk.dp);
+  const isLunas = sisa === 0 && total > 0;
+  const isDp = !isLunas && bk.dp > 0;
 
   document.getElementById('inv-dp-input').value = bk.dp;
   document.getElementById('inv-preview-no').textContent = '#' + bk.invoiceCode;
-  document.getElementById('inv-preview-client').textContent = `${bk.client} (${bk.phone})`;
-  document.getElementById('inv-preview-date').textContent = formatTanggalIndo(bk.dateISO);
-  document.getElementById('inv-preview-meta').textContent = `${bk.venue} • ${bk.category}`;
+  document.getElementById('inv-preview-issued').textContent = `Terbit: ${formatTanggalIndo(todayISO())}`;
 
-  document.getElementById('inv-preview-items').innerHTML = bk.invoiceItems.map((it, idx) => `
-    <div class="flex items-center justify-between gap-2 py-2 border-b border-[#EFE2D3]">
-      <span class="font-semibold text-espresso">${it.name}</span>
-      <div class="flex items-center gap-2 shrink-0">
-        <span class="font-mono font-bold">${rp(it.price)}</span>
-        <button type="button" onclick="removeInvoiceItem(${idx})" class="text-danger font-bold print:hidden">✕</button>
-      </div>
-    </div>`).join('');
+  const statusBadge = document.getElementById('inv-preview-status');
+  if (statusBadge) {
+    if (isLunas) {
+      statusBadge.textContent = 'LUNAS';
+      statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
+    } else if (isDp) {
+      statusBadge.textContent = 'DP MASUK';
+      statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40';
+    } else {
+      statusBadge.textContent = 'MENUNGGU DP';
+      statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-400/40';
+    }
+  }
+
+  document.getElementById('inv-preview-client').textContent = bk.client;
+  document.getElementById('inv-preview-phone').textContent = `WhatsApp: ${bk.phone || '-'}`;
+  document.getElementById('inv-preview-date').textContent = `Acara: ${formatTanggalIndo(bk.dateISO)}`;
+  document.getElementById('inv-preview-venue').textContent = `Lokasi: ${bk.venue || 'Banyuwangi'}`;
+  document.getElementById('inv-preview-category').textContent = `Kategori: ${bk.category}`;
+
+  document.getElementById('inv-preview-items').innerHTML = bk.invoiceItems.map((it, idx) => {
+    const descText = (it.desc && String(it.desc).trim()) ? String(it.desc).trim() : findPackageDesc(it.name, bk.packageId);
+    const fasilitasList = descText
+      ? descText.split(/[,•;\n]+/).map(s => s.trim().replace(/\.$/, '')).filter(Boolean)
+      : [];
+    const fasilitasHtml = fasilitasList.length
+      ? `<div class="mt-2 flex flex-wrap gap-1.5">
+          ${fasilitasList.map(f => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FAF3EB] border border-[#E6D5C3] text-[10.5px] text-espresso"><span class="text-[#FF6B00] font-bold">✓</span> ${f}</span>`).join('')}
+        </div>`
+      : '';
+
+    return `
+      <div class="px-4 py-3.5 flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-beige text-espresso">${String(idx + 1).padStart(2, '0')}</span>
+            <span class="font-bold text-xs sm:text-sm text-espresso">${it.name}</span>
+          </div>
+          ${fasilitasHtml}
+        </div>
+        <div class="flex items-center gap-2 shrink-0 pt-0.5">
+          <span class="font-mono font-bold text-xs sm:text-sm text-espresso">${rp(it.price)}</span>
+          <button type="button" title="Ubah keterangan fasilitas" onclick="editInvoiceItemDesc(${idx})" class="no-print px-1.5 py-0.5 rounded bg-cream border border-[#DEC9B5] text-[11px]">✏️</button>
+          <button type="button" title="Hapus item" onclick="removeInvoiceItem(${idx})" class="no-print text-danger font-bold px-1">✕</button>
+        </div>
+      </div>`;
+  }).join('');
 
   document.getElementById('inv-preview-total').textContent = rp(total);
   document.getElementById('inv-preview-dp').textContent = rp(bk.dp);
   document.getElementById('inv-preview-sisa').textContent = rp(sisa);
+
   const cfg = appState.paymentConfig;
   document.getElementById('inv-preview-bank').innerHTML =
-    `<strong>Rekening Resmi:</strong> ${cfg.bank} — <span class="font-mono font-bold">${cfg.accountNumber}</span> a.n. <strong>${cfg.accountHolder}</strong> | QRIS: ${cfg.merchantQris}`;
+    `<strong>${cfg.bank}</strong><br/><span class="font-mono text-xs font-extrabold text-espresso">${cfg.accountNumber}</span> — a.n. <strong>${cfg.accountHolder}</strong>`;
+  document.getElementById('inv-preview-qris').innerHTML =
+    `QRIS Resmi: <strong>${cfg.merchantQris}</strong> (NMID: ${cfg.nmid})`;
 }
 
 window.selectInvoiceBooking = function() {
@@ -1040,7 +1099,7 @@ window.addInvoicePackageItem = function() {
   const bk = getActiveInvoiceBooking();
   const pkg = appState.pricelist.find(p => p.id === document.getElementById('inv-pkg-select').value);
   if (!bk || !pkg) return;
-  bk.invoiceItems.push({ name: pkg.name, price: pkg.price });
+  bk.invoiceItems.push({ name: pkg.name, price: pkg.price, desc: pkg.desc || '' });
   bk.updatedAt = Date.now();
   saveState(true); renderAll();
 };
@@ -1048,13 +1107,29 @@ window.addInvoicePackageItem = function() {
 window.addInvoiceCustomItem = function() {
   const bk = getActiveInvoiceBooking();
   const name = (document.getElementById('inv-custom-name').value || '').trim();
+  const desc = (document.getElementById('inv-custom-desc').value || '').trim();
   const price = Number(document.getElementById('inv-custom-price').value) || 0;
   if (!bk || !name) return;
-  bk.invoiceItems.push({ name, price });
+  bk.invoiceItems.push({ name, price, desc });
   document.getElementById('inv-custom-name').value = '';
+  document.getElementById('inv-custom-desc').value = '';
   document.getElementById('inv-custom-price').value = '';
   bk.updatedAt = Date.now();
   saveState(true); renderAll();
+};
+
+window.editInvoiceItemDesc = function(idx) {
+  const bk = getActiveInvoiceBooking();
+  if (!bk || !bk.invoiceItems[idx]) return;
+  const it = bk.invoiceItems[idx];
+  const cur = it.desc || findPackageDesc(it.name, bk.packageId);
+  const next = prompt(`Ubah rincian fasilitas yang didapat untuk "${it.name}" (pisahkan tiap fasilitas dengan koma):`, cur);
+  if (next === null) return;
+  it.desc = next.trim();
+  bk.updatedAt = Date.now();
+  saveState(true);
+  renderInvoice();
+  showToast('Fasilitas Diperbarui', it.name);
 };
 
 window.removeInvoiceItem = function(idx) {
@@ -1087,13 +1162,17 @@ window.sendInvoiceWA = function() {
   const total = bk.invoiceItems.reduce((s, it) => s + (Number(it.price) || 0), 0);
   const sisa = Math.max(0, total - bk.dp);
   const cfg = appState.paymentConfig;
-  const itemsTxt = bk.invoiceItems.map(i => `• ${i.name}: ${rp(i.price)}`).join('\n');
+  const itemsTxt = bk.invoiceItems.map(i => {
+    const d = i.desc || findPackageDesc(i.name, bk.packageId);
+    return `• *${i.name}*: ${rp(i.price)}` + (d ? `\n   _(Fasilitas: ${d})_` : '');
+  }).join('\n');
+
   const msg =
-    `*INVOICE RESMI FILEPHOTOKU.STD (#${bk.invoiceCode})*\n\n` +
+    `*INVOICE RESMI FILEPHOTOKU (#${bk.invoiceCode})*\n\n` +
     `Klien: *${bk.client}*\n` +
-    `Tanggal: *${formatTanggalIndo(bk.dateISO)}*\n` +
+    `Tanggal Acara: *${formatTanggalIndo(bk.dateISO)}*\n` +
     `Lokasi: ${bk.venue}\n\n` +
-    `*Rincian Layanan:*\n${itemsTxt}\n\n` +
+    `*Rincian Paket & Fasilitas:*\n${itemsTxt}\n\n` +
     `• Total Tagihan: *${rp(total)}*\n` +
     `• DP Masuk: ${rp(bk.dp)}\n` +
     `• *Sisa Pelunasan: ${rp(sisa)}*\n` +
@@ -1309,7 +1388,7 @@ function renderSetup() {
           </select>
           <input id="new-pl-name" type="text" placeholder="Nama Paket" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5]" />
           <input id="new-pl-price" type="number" placeholder="Harga (Rp)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono" />
-          <input id="new-pl-desc" type="text" placeholder="Rincian paket..." class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5]" />
+          <input id="new-pl-desc" type="text" placeholder="Rincian fasilitas (pisahkan koma, mis: Cetak 10RS, Album, Google Drive)..." class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5]" />
           <button type="button" onclick="addPricelistItem()" class="w-full py-2.5 rounded-xl bg-espresso text-white font-bold">Simpan Paket Baru</button>
         </div>
         <div class="space-y-2">
@@ -1403,7 +1482,7 @@ window.updatePricelistField = function(id, field, val) {
   const p = appState.pricelist.find(x => x.id === id);
   if (!p) return;
   p[field] = field === 'price' ? (Number(val) || 0) : val;
-  saveState(true); renderPublicWebsite();
+  saveState(true); renderPublicWebsite(); renderInvoice();
 };
 window.deletePricelistItem = function(id) {
   if (!confirm('Hapus paket ini?')) return;
@@ -1481,7 +1560,6 @@ window.importBackupJSON = function(inp) {
 // --- INISIALISASI SAAT HALAMAN DIBUKA ---
 document.addEventListener('DOMContentLoaded', () => {
   loadLocalState();
-  // Saat pertama dibuka selalu masuk Mode Klien (aman untuk konsumen)
   appState.isUnlocked = false;
   appState.activeTab = 'website';
   document.body.classList.add('public-client-mode');
