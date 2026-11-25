@@ -56,6 +56,26 @@
     /* Cegah input/select melebar di layar iPhone */
     input, select, textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
 
+    /* Fix khusus input tanggal di iPhone agar pas di dalam kotak & rata kiri */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px;
+  box-sizing: border-box !important;
+  overflow: hidden;
+  text-align: left;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+.grid > div {
+  min-width: 0;
+}
+
     /* Cetak PDF bersih khusus area Invoice */
     @media print {
       body * { visibility: hidden !important; }
