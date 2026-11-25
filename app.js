@@ -1,1750 +1,1440 @@
-const CLOUD_DB_URL = 'https://filephotoku-db-default-rtdb.asia-southeast1.firebasedatabase.app/'
-let appState = loadState();
+/* ============================================================================
+   LOGIKA UTAMA ANTI-CRASH, TANGGAL AKURAT, QRIS & FIREBASE SYNC
+   FILEPHOTOKU.STD Studio OS v5
+   ============================================================================ */
+
+let appState = null;
+let proofUploadBase64 = '';
 let logoTapCount = 0;
 let logoTapTimer = null;
+let isSyncing = false;
+let searchKeyword = '';
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
-    const parsed = JSON.parse(raw);
-    return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
-  } catch (e) {
-    return JSON.parse(JSON.stringify(DEFAULT_STATE));
-  }
+const nowInit = new Date();
+let calYear = nowInit.getFullYear();
+let calMonth = nowInit.getMonth(); // 0-11
+
+const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BULAN_SINGKAT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const STAGES = ['Booking', 'Liputan', 'Preview (1-3 Hr)', 'Editing (3-7 Hr)', 'Selesai'];
+
+// --- HELPER FORMAT ---
+function rp(n) {
+  return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
 }
 
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-  } catch (e) {
-    console.error('Gagal menyimpan state:', e);
-  }
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-function showToast(title, message) {
+function normalizeDateISO(b) {
+  if (b && typeof b.dateISO === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.dateISO)) {
+    return b.dateISO;
+  }
+  if (b && typeof b.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.date)) {
+    return b.date;
+  }
+  const dayNum = Math.min(31, Math.max(1, parseInt(b && b.day, 10) || new Date().getDate()));
+  const y = new Date().getFullYear();
+  const m = String(new Date().getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-${String(dayNum).padStart(2, '0')}`;
+}
+
+function formatTanggalIndo(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '-';
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${BULAN_SINGKAT[m - 1] || ''} ${y}`;
+}
+
+function showToast(title, msg) {
   const box = document.getElementById('toast-box');
+  if (!box) return;
   document.getElementById('toast-title').textContent = title;
-  document.getElementById('toast-message').textContent = message || '';
+  document.getElementById('toast-message').textContent = msg || '';
   box.classList.remove('hidden');
-  setTimeout(() => box.classList.add('hidden'), 3500);
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(() => box.classList.add('hidden'), 3200);
 }
 
-function formatRupiah(num) {
-  return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
-}
+// --- NORMALISASI / SANITIZER DATA (MENCEGAH CRASH) ---
+function sanitizeBooking(b, idx = 0) {
+  const item = (b && typeof b === 'object') ? b : {};
+  const client = String(item.client || item.clientName || `Klien #${idx + 1}`).trim();
+  const price = Number(item.price) || 0;
+  const dp = Number(item.dp) || 0;
+  const dateISO = normalizeDateISO(item);
 
-function copyTextToClipboard(text, successTitle) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast(successTitle, text);
-    }).catch(() => fallbackCopy(text, successTitle));
-  } else {
-    fallbackCopy(text, successTitle);
+  let photos = [];
+  if (Array.isArray(item.selectedPhotos)) {
+    photos = item.selectedPhotos.filter(Boolean).map(String);
+  } else if (typeof item.selectedPhotos === 'string' && item.selectedPhotos.trim()) {
+    photos = item.selectedPhotos.split(/[,\s]+/).filter(Boolean);
   }
+
+  let crew = Array.isArray(item.crew) && item.crew.length > 0
+    ? item.crew.map(c => ({
+        role: (c && c.role) || 'Kru',
+        name: (c && c.name) || 'Kamu (Owner FILEPHOTOKU.STD)',
+        fee: Number(c && c.fee) || 0
+      }))
+    : [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }];
+
+  let invoiceItems = Array.isArray(item.invoiceItems) && item.invoiceItems.length > 0
+    ? item.invoiceItems.map(it => ({ name: String(it.name || 'Item'), price: Number(it.price) || 0 }))
+    : [{ name: item.packageName || 'Paket Dokumentasi', price }];
+
+  return {
+    id: String(item.id || ('BK-' + (Date.now() + idx))),
+    invoiceCode: item.invoiceCode || ('INV-' + String(item.id || idx).slice(-6)),
+    createdAt: Number(item.createdAt) || Date.now(),
+    updatedAt: Number(item.updatedAt) || Date.now(),
+    client,
+    phone: String(item.phone || '-'),
+    dateISO,
+    day: parseInt(dateISO.split('-')[2], 10) || 1,
+    date: formatTanggalIndo(dateISO),
+    category: item.category || 'Wedding',
+    packageId: item.packageId || 'W-01',
+    packageName: item.packageName || 'WEDDING - SILVER 01',
+    price,
+    dp,
+    paymentMethod: item.paymentMethod || 'QRIS',
+    paymentTerm: item.paymentTerm || 'DP 30%',
+    status: dp >= price && price > 0 ? 'Lunas' : (dp > 0 ? 'DP Masuk' : 'Booking Baru'),
+    stage: STAGES.includes(item.stage) ? item.stage : 'Booking',
+    venue: item.venue || item.location || 'Banyuwangi',
+    mapsLink: item.mapsLink || '',
+    standbyTime: item.standbyTime || '07:00 WIB',
+    memoryCard: item.memoryCard || 'Memory Card #A1',
+    driveLink: item.driveLink || '',
+    proofImage: item.proofImage || '',
+    selectedPhotos: photos,
+    invoiceItems,
+    crew
+  };
 }
 
-function fallbackCopy(text, successTitle) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
+function sanitizeState(raw) {
+  const base = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  const src = (raw && typeof raw === 'object') ? raw : {};
+
+  const merged = Object.assign({}, base, src);
+  merged.studioInfo = Object.assign({}, base.studioInfo, src.studioInfo || {});
+  merged.paymentConfig = Object.assign({}, base.paymentConfig, src.paymentConfig || {});
+  merged.categories = (Array.isArray(src.categories) && src.categories.length > 0) ? src.categories : base.categories;
+  merged.pricelist = (Array.isArray(src.pricelist) && src.pricelist.length >= 4) ? src.pricelist : base.pricelist;
+  merged.crewList = (Array.isArray(src.crewList) && src.crewList.length > 0) ? src.crewList : base.crewList;
+  merged.gearList = (Array.isArray(src.gearList) && src.gearList.length > 0) ? src.gearList : base.gearList;
+  merged.deletedBookingIds = Array.isArray(src.deletedBookingIds) ? src.deletedBookingIds : [];
+
+  const rawBookings = Array.isArray(src.bookings) && src.bookings.length > 0 ? src.bookings : base.bookings;
+  merged.bookings = rawBookings
+    .filter(b => b && !merged.deletedBookingIds.includes(String(b.id)))
+    .map((b, i) => sanitizeBooking(b, i))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  return merged;
+}
+
+function loadLocalState() {
   try {
-    document.execCommand('copy');
-    showToast(successTitle, text);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    appState = sanitizeState(saved ? JSON.parse(saved) : null);
   } catch (e) {
-    showToast('Gagal Menyalin', 'Silakan salin secara manual.');
+    appState = sanitizeState(null);
   }
-  document.body.removeChild(ta);
 }
 
-// ==================== PINTU RAHASIA ADMIN (KETUK LOGO 3 KALI) ====================
-function handleSecretLogoTap() {
-  if (appState.isUnlocked) {
-    switchTab('dashboard');
-    return;
+function mergeBookings(localArr, cloudArr, deletedIds) {
+  const delSet = new Set(deletedIds || []);
+  const map = new Map();
+  (cloudArr || []).forEach((b, i) => {
+    const sb = sanitizeBooking(b, i);
+    if (!delSet.has(sb.id)) map.set(sb.id, sb);
+  });
+  (localArr || []).forEach((b, i) => {
+    const sb = sanitizeBooking(b, i);
+    if (delSet.has(sb.id)) return;
+    if (!map.has(sb.id) || sb.updatedAt >= map.get(sb.id).updatedAt) {
+      map.set(sb.id, sb);
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+async function saveState(pushCloud = true) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  if (!pushCloud || isSyncing || !FP_CLOUD_URL) return;
+  try {
+    const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
+    const cloud = res.ok ? await res.json() : null;
+    if (cloud && Array.isArray(cloud.bookings)) {
+      const allDel = [...new Set([...(appState.deletedBookingIds || []), ...(cloud.deletedBookingIds || [])])];
+      appState.deletedBookingIds = allDel;
+      appState.bookings = mergeBookings(appState.bookings, cloud.bookings, allDel);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    }
+    const payload = JSON.parse(JSON.stringify(appState));
+    delete payload.isUnlocked;
+    delete payload.activeTab;
+    await fetch(`${FP_CLOUD_URL}/studioData.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    console.warn('Simpan cloud tertunda:', e);
   }
+}
+
+window.syncFromCloud = async function(showNotif = false) {
+  if (isSyncing || !FP_CLOUD_URL) return;
+  try {
+    isSyncing = true;
+    const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
+    if (!res.ok) return;
+    const cloud = await res.json();
+    if (cloud && typeof cloud === 'object') {
+      const keepUnlock = appState.isUnlocked;
+      const keepTab = appState.activeTab;
+      const allDel = [...new Set([...(appState.deletedBookingIds || []), ...(cloud.deletedBookingIds || [])])];
+      const mergedBookings = mergeBookings(appState.bookings, cloud.bookings || [], allDel);
+
+      const nextState = sanitizeState(Object.assign({}, appState, cloud, {
+        bookings: mergedBookings,
+        deletedBookingIds: allDel
+      }));
+      nextState.isUnlocked = keepUnlock;
+      nextState.activeTab = keepTab;
+      appState = nextState;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      renderAll();
+      if (showNotif) showToast('Server Tersinkronisasi', `${appState.bookings.length} jadwal booking aktif.`);
+    }
+  } catch (e) {
+    console.warn('Sync cloud gagal:', e);
+  } finally {
+    isSyncing = false;
+  }
+};
+
+// --- NAVIGASI & MODE ADMIN / KLIEN ---
+window.handleSecretLogoTap = function() {
+  if (appState.isUnlocked) { switchTab('dashboard'); return; }
   logoTapCount++;
   clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 1200);
   if (logoTapCount >= 3) {
     logoTapCount = 0;
     openAdminLoginModal();
-  } else {
-    logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 1200);
   }
-}
+};
 
-function openAdminLoginModal() {
-  document.getElementById('admin-pin-input').value = '';
-  document.getElementById('modal-admin-login').classList.remove('hidden');
-  setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
-}
+window.openAdminLoginModal = function() {
+  const m = document.getElementById('modal-admin-login');
+  const inp = document.getElementById('admin-pin-input');
+  if (m) m.classList.remove('hidden');
+  if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 100); }
+};
 
-function closeAdminLoginModal() {
+window.closeAdminLoginModal = function() {
   document.getElementById('modal-admin-login').classList.add('hidden');
-}
+};
 
-function verifyAdminPin() {
-  const pin = document.getElementById('admin-pin-input').value.trim();
-  const correctPin = appState.adminPin || '2026';
-  if (pin === correctPin) {
-    appState.isUnlocked = true;
-    saveState();
-    document.body.classList.remove('public-client-mode');
-    document.getElementById('modal-admin-login').classList.add('hidden');
-    switchTab('dashboard');
-    showToast('Mode Admin Aktif!', 'Selamat bekerja di FILEPHOTOKU.STD Studio OS.');
-  } else {
-    showToast('PIN Salah', 'Masukkan PIN Owner yang benar.');
-  }
-}
-
-function lockAdminSession() {
-  appState.isUnlocked = false;
-  saveState();
-  document.body.classList.add('public-client-mode');
-  switchTab('website');
-  showToast('Tampilan Klien Aktif', 'Menu Admin disembunyikan. Ketuk logo 3x untuk masuk kembali.');
-}
-
-// ==================== NAVIGASI TAB ====================
-function switchTab(tabId) {
-  const adminOnlyTabs = ['setup', 'dashboard', 'booking', 'invoice', 'crew', 'gear', 'photosort'];
-  if (adminOnlyTabs.includes(tabId) && !appState.isUnlocked) {
-    tabId = 'website';
-  }
-
-  appState.activeTab = tabId;
-  saveState();
-
-  document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
-  const target = document.getElementById('tab-' + tabId);
-  if (target) target.classList.add('active');
-
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    if (btn.dataset.tab === tabId) {
-      btn.className = 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-terracotta text-white shadow-sm transition';
-    } else {
-      btn.className = 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-espresso hover:bg-beige transition';
-    }
-  });
-
-  document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-    if (btn.dataset.tab === tabId) {
-      btn.classList.remove('text-espressoMuted');
-      btn.classList.add('text-terracotta');
-    } else {
-      btn.classList.remove('text-terracotta');
-      btn.classList.add('text-espressoMuted');
-    }
-  });
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function switchSetupSubTab(subId) {
-  appState.setupSubTab = subId;
-  saveState();
-  ['pricelist', 'crew', 'gear', 'profile'].forEach(id => {
-    const panel = document.getElementById('setup-panel-' + id);
-    const btn = document.getElementById('subtab-btn-' + id);
-    if (panel) panel.classList.toggle('active', id === subId);
-    if (btn) {
-      btn.className = id === subId
-        ? 'py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-espresso text-white shadow transition'
-        : 'py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-espresso hover:bg-white/60 transition';
-    }
-  });
-}
-
-// ==================== MENU 0: MASTER DATA & PRICELIST ====================
-function renderSetupMaster() {
-  const catList = document.getElementById('setup-service-categories-list');
-  if (catList) {
-    catList.innerHTML = appState.serviceCategories.map((cat, idx) => `
-      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-        <span>${cat}</span>
-        <button onclick="deleteServiceCategory(${idx})" class="text-espressoMuted hover:text-danger"><i class="ph-bold ph-x"></i></button>
-      </div>
-    `).join('');
-  }
-
-  const plCatSelect = document.getElementById('pl-new-category');
-  if (plCatSelect) {
-    plCatSelect.innerHTML = appState.serviceCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-  }
-
-  const plBadge = document.getElementById('pricelist-count-badge');
-  if (plBadge) plBadge.textContent = `${appState.pricelist.length} Paket Aktif`;
-
-  const plContainer = document.getElementById('setup-pricelist-container');
-  if (plContainer) {
-    plContainer.innerHTML = appState.pricelist.map((item, idx) => `
-      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-3 rounded-2xl bg-cream/60 border border-[#E6D5C3]">
-        <div class="sm:col-span-2">
-          <select onchange="updatePricelistField(${idx}, 'category', this.value)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-terracotta">
-            ${appState.serviceCategories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
-          </select>
-        </div>
-        <div class="sm:col-span-3">
-          <input type="text" value="${item.name}" oninput="updatePricelistField(${idx}, 'name', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso" />
-        </div>
-        <div class="sm:col-span-2">
-          <input type="number" step="25000" value="${item.price}" oninput="updatePricelistField(${idx}, 'price', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-espresso" />
-        </div>
-        <div class="sm:col-span-4">
-          <input type="text" value="${item.desc || ''}" oninput="updatePricelistField(${idx}, 'desc', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs text-espressoMuted" />
-        </div>
-        <div class="sm:col-span-1 flex justify-end">
-          <button onclick="deletePricelistItem(${idx})" class="p-2 rounded-xl bg-dangerLight text-danger hover:bg-danger hover:text-white transition"><i class="ph-bold ph-trash"></i></button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  const crewBadge = document.getElementById('crew-master-count-badge');
-  if (crewBadge) crewBadge.textContent = `${appState.crewMaster.length} Kru Terdaftar`;
-
-  const crewList = document.getElementById('setup-crew-master-list');
-  if (crewList) {
-    crewList.innerHTML = appState.crewMaster.map((cr, idx) => `
-      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-3 rounded-2xl bg-cream/60 border border-[#E6D5C3]">
-        <div class="sm:col-span-4">
-          <input type="text" value="${cr.name}" oninput="updateCrewMasterField(${idx}, 'name', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso" />
-        </div>
-        <div class="sm:col-span-3">
-          <input type="text" value="${cr.role}" oninput="updateCrewMasterField(${idx}, 'role', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold text-terracotta" />
-        </div>
-        <div class="sm:col-span-2">
-          <input type="number" step="25000" value="${cr.defaultFee}" oninput="updateCrewMasterField(${idx}, 'defaultFee', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-espresso" />
-        </div>
-        <div class="sm:col-span-2">
-          <input type="text" value="${cr.phone || ''}" oninput="updateCrewMasterField(${idx}, 'phone', this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs text-espressoMuted" />
-        </div>
-        <div class="sm:col-span-1 flex justify-end">
-          <button onclick="deleteCrewMasterItem(${idx})" class="p-2 rounded-xl bg-dangerLight text-danger"><i class="ph-bold ph-trash"></i></button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  const gearListEl = document.getElementById('setup-gear-list');
-  if (gearListEl) {
-    gearListEl.innerHTML = appState.gearList.map((g, idx) => `
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-cream/70 border border-[#E6D5C3]">
-        <input type="text" value="${g.name}" oninput="updateGearSetupField(${idx}, 'name', this.value)" class="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#DEC9B5] text-xs font-bold text-espresso" />
-        <div class="flex items-center gap-2">
-          <input type="text" value="${g.holder}" oninput="updateGearSetupField(${idx}, 'holder', this.value)" class="flex-1 sm:w-40 px-2.5 py-1.5 rounded-lg bg-white border border-[#DEC9B5] text-xs text-espressoMuted" />
-          <button onclick="deleteGearItem(${idx})" class="p-1.5 rounded-lg bg-dangerLight text-danger"><i class="ph-bold ph-trash"></i></button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  const mcListEl = document.getElementById('setup-mc-list');
-  if (mcListEl) {
-    mcListEl.innerHTML = appState.memoryCards.map((mc, idx) => `
-      <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-cream/70 border border-[#E6D5C3]">
-        <input type="text" value="${mc.code}" oninput="updateMcSetupField(${idx}, 'code', this.value)" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-espresso" />
-        <button onclick="deleteMcItem(${idx})" class="p-1.5 rounded-lg bg-dangerLight text-danger shrink-0"><i class="ph-bold ph-trash"></i></button>
-      </div>
-    `).join('');
-  }
-
-  const prof = appState.studioProfile;
-  const setVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && document.activeElement !== el) el.value = val;
-  };
-  setVal('prof-brand-name', prof.brandName);
-  setVal('prof-city', prof.city);
-  setVal('prof-wa', prof.adminWa);
-  setVal('prof-bank', prof.bankInfo);
-  setVal('prof-tagline', prof.tagline);
-  setVal('invoice-bank-input', prof.bankInfo);
-}
-
-function addServiceCategory() {
-  const input = document.getElementById('new-service-cat-input');
-  const val = input.value.trim();
-  if (!val) return;
-  if (!appState.serviceCategories.includes(val)) {
-    appState.serviceCategories.push(val);
-    input.value = '';
-    saveState();
-    renderAll();
-    showToast('Kategori Ditambahkan', val);
-  }
-}
-
-function deleteServiceCategory(idx) {
-  appState.serviceCategories.splice(idx, 1);
-  saveState();
-  renderAll();
-}
-
-function addPricelistItem() {
-  const cat = document.getElementById('pl-new-category').value;
-  const name = document.getElementById('pl-new-name').value.trim();
-  const price = Number(document.getElementById('pl-new-price').value) || 0;
-  const desc = document.getElementById('pl-new-desc').value.trim();
-  if (!name || price <= 0) {
-    showToast('Data Belum Lengkap', 'Isi nama paket dan harga.');
-    return;
-  }
-  appState.pricelist.push({ id: 'PL-' + Date.now(), category: cat, name, price, desc });
-  document.getElementById('pl-new-name').value = '';
-  document.getElementById('pl-new-price').value = '';
-  document.getElementById('pl-new-desc').value = '';
-  saveState();
-  renderAll();
-  showToast('Paket Tersimpan', name);
-}
-
-function updatePricelistField(idx, field, value) {
-  if (!appState.pricelist[idx]) return;
-  appState.pricelist[idx][field] = field === 'price' ? (Number(value) || 0) : value;
-  saveState();
-  renderInvoiceSection();
-  renderWebsiteAndVendors();
-}
-
-function deletePricelistItem(idx) {
-  appState.pricelist.splice(idx, 1);
-  saveState();
-  renderAll();
-}
-
-function addCrewMasterItem() {
-  const name = document.getElementById('crew-new-name').value.trim();
-  const role = document.getElementById('crew-new-role').value;
-  const defaultFee = Number(document.getElementById('crew-new-fee').value) || 0;
-  const phone = document.getElementById('crew-new-wa').value.trim();
-  if (!name) return;
-  appState.crewMaster.push({ id: 'CR-' + Date.now(), name, role, defaultFee, phone });
-  document.getElementById('crew-new-name').value = '';
-  document.getElementById('crew-new-fee').value = '';
-  document.getElementById('crew-new-wa').value = '';
-  saveState();
-  renderAll();
-}
-
-function updateCrewMasterField(idx, field, value) {
-  if (!appState.crewMaster[idx]) return;
-  appState.crewMaster[idx][field] = field === 'defaultFee' ? (Number(value) || 0) : value;
-  saveState();
-  renderCrewSection();
-}
-
-function deleteCrewMasterItem(idx) {
-  appState.crewMaster.splice(idx, 1);
-  saveState();
-  renderAll();
-}
-
-function addGearFromSetup() {
-  const name = document.getElementById('setup-gear-name').value.trim();
-  const holder = document.getElementById('setup-gear-holder').value.trim() || 'Drybox Studio';
-  if (!name) return;
-  appState.gearList.push({ id: 'G-' + Date.now(), name, icon: 'ph-camera', holder, status: 'Tersedia di Studio' });
-  document.getElementById('setup-gear-name').value = '';
-  document.getElementById('setup-gear-holder').value = '';
-  saveState();
-  renderAll();
-}
-
-function updateGearSetupField(idx, field, value) {
-  if (!appState.gearList[idx]) return;
-  appState.gearList[idx][field] = value;
-  saveState();
-  renderGearSection();
-}
-
-function deleteGearItem(idx) {
-  appState.gearList.splice(idx, 1);
-  saveState();
-  renderAll();
-}
-
-function addMemoryCardFromSetup() {
-  const code = document.getElementById('setup-mc-code').value.trim();
-  const jobName = document.getElementById('setup-mc-job').value.trim() || 'Siap Pakai';
-  if (!code) return;
-  appState.memoryCards.push({ id: 'MC-' + Date.now(), code, jobName, hddLocation: 'Studio FILEPHOTOKU.STD', status: 'Aman - Siap Format Ulang' });
-  document.getElementById('setup-mc-code').value = '';
-  document.getElementById('setup-mc-job').value = '';
-  saveState();
-  renderAll();
-}
-
-function updateMcSetupField(idx, field, value) {
-  if (!appState.memoryCards[idx]) return;
-  appState.memoryCards[idx][field] = value;
-  saveState();
-  renderGearSection();
-}
-
-function deleteMcItem(idx) {
-  appState.memoryCards.splice(idx, 1);
-  saveState();
-  renderAll();
-}
-
-function saveStudioProfile() {
-  appState.studioProfile.brandName = document.getElementById('prof-brand-name').value.trim() || 'FILEPHOTOKU.STD';
-  appState.studioProfile.city = document.getElementById('prof-city').value.trim() || 'Banyuwangi';
-  appState.studioProfile.adminWa = document.getElementById('prof-wa').value.trim() || '085708001457';
-  appState.studioProfile.bankInfo = document.getElementById('prof-bank').value.trim();
-  appState.studioProfile.tagline = document.getElementById('prof-tagline').value.trim();
-  saveState();
-  renderInvoiceSection();
-  renderWebsiteAndVendors();
-}
-
-function exportStudioData() {
-  const dataStr = JSON.stringify(appState, null, 2);
-  copyTextToClipboard(dataStr, 'Backup JSON Disalin & Diunduh!');
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `FILEPHOTOKU_BACKUP_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function openImportModal() {
-  document.getElementById('import-json-textarea').value = '';
-  document.getElementById('modal-import-json').classList.remove('hidden');
-}
-
-function closeImportModal() {
-  document.getElementById('modal-import-json').classList.add('hidden');
-}
-
-function handleJsonFileUpload(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => { document.getElementById('import-json-textarea').value = e.target.result; };
-  reader.readAsText(file);
-}
-
-function confirmImportStudioData() {
-  try {
-    const parsed = JSON.parse(document.getElementById('import-json-textarea').value.trim());
-    if (!parsed.pricelist || !parsed.bookings) throw new Error('Invalid');
-    appState = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
-    saveState();
-    renderAll();
-    closeImportModal();
-    showToast('Restore Berhasil!', 'Seluruh data studio telah diperbarui.');
-  } catch (err) {
-    showToast('Format JSON Tidak Valid', 'Pastikan teks JSON utuh.');
-  }
-}
-
-// ==================== MENU 1: DASHBOARD & KAS ====================
-function calculateFinancialSummary() {
-  let totalGross = 0, totalDP = 0, totalUnpaid = 0, overdueCount = 0, totalCrewFeeAll = 0;
-
-  appState.bookings.forEach(b => {
-    const activeItemsSum = b.items.filter(i => i.checked).reduce((acc, cur) => acc + Number(cur.price || 0), 0);
-    b.totalPrice = activeItemsSum > 0 ? activeItemsSum : b.totalPrice;
-    const remaining = Math.max(0, b.totalPrice - b.dpPaid);
-    totalGross += b.totalPrice;
-    totalDP += Number(b.dpPaid || 0);
-    totalUnpaid += remaining;
-    if (remaining > 0 && b.isOverdue) overdueCount += 1;
-    totalCrewFeeAll += b.crew.reduce((acc, c) => acc + Number(c.fee || 0), 0);
-  });
-
-  const netProfit = Math.max(0, totalGross - totalCrewFeeAll);
-  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-
-  setTxt('dash-total-unpaid', formatRupiah(totalUnpaid));
-  setTxt('dash-overdue-count', `${overdueCount} Perlu Ditagih`);
-  setTxt('nav-overdue-pill', `${overdueCount} Lewat`);
-  setTxt('nav-booking-badge', `${appState.bookings.length} Job`);
-  setTxt('stat-unpaid', formatRupiah(totalUnpaid));
-  setTxt('stat-unpaid-sub', `Dari ${appState.bookings.length} proyek aktif`);
-  setTxt('stat-dp', formatRupiah(totalDP));
-  setTxt('stat-gross', formatRupiah(totalGross));
-  setTxt('stat-profit', formatRupiah(netProfit));
-
-  const hasEmptyCrew = appState.bookings.some(b => b.crew.some(c => c.assignee === 'Kosong'));
-  const warningDot = document.getElementById('crew-warning-dot');
-  if (warningDot) warningDot.style.display = hasEmptyCrew ? 'inline-block' : 'none';
-}
-
-function renderDashboardFileTracker() {
-  const container = document.getElementById('dashboard-file-tracker');
-  if (!container) return;
-  const steps = ['1. Backup', '2. Preview', '3. Sortir', '4. Edit', '5. Selesai'];
-  container.innerHTML = appState.bookings.map(b => `
-    <div class="p-3.5 rounded-2xl bg-cream border border-[#E6D5C3] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-      <div>
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="px-2 py-0.5 rounded-full bg-terracotta text-white text-[10px] font-bold">${b.category}</span>
-          <span class="font-bold text-xs sm:text-sm text-espresso">${b.couple}</span>
-          <span class="font-mono text-[11px] text-espressoMuted">(${b.day} ${b.month})</span>
-        </div>
-        <p class="text-[11px] text-driveBlue font-semibold mt-1">${b.serviceType}</p>
-      </div>
-      <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-        ${steps.map((lbl, idx) => {
-          const stepNum = idx + 1;
-          const done = stepNum <= (b.fileStage || 1);
-          return `<button onclick="updateClientFileStage('${b.id}', ${stepNum})" class="px-2 py-1.5 rounded-xl text-[10px] font-bold transition ${done ? 'bg-driveBlue text-white' : 'bg-white text-espressoMuted border border-[#DEC9B5]'}">${done ? '✓ ' : ''}${lbl}</button>`;
-        }).join('')}
-      </div>
-    </div>
-  `).join('');
-}
-
-function updateClientFileStage(bookingId, stepNum) {
-  const b = appState.bookings.find(x => x.id === bookingId);
-  if (!b) return;
-  b.fileStage = stepNum;
-  saveState();
-  renderDashboardFileTracker();
-}
-
-function renderMiniOctoberCalendar() {
-  const grid = document.getElementById('mini-october-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  for (let i = 0; i < 3; i++) grid.innerHTML += `<div class="py-1.5 text-transparent">.</div>`;
-  const bookedDays = appState.bookedOctoberDates.map(d => d.day);
-  document.getElementById('october-booked-badge').textContent = `${bookedDays.length} Terisi`;
-  for (let day = 1; day <= 31; day++) {
-    const isBooked = bookedDays.includes(day);
-    grid.innerHTML += `<button onclick="switchTab('booking'); setBookingView('calendar');" class="py-1.5 rounded-xl font-mono text-xs ${isBooked ? 'bg-terracotta text-white font-bold' : 'bg-cream text-espressoMuted'}">${day}</button>`;
-  }
-}
-
-function remindAllOverdueClients() {
-  const overdues = appState.bookings.filter(b => (b.totalPrice - b.dpPaid) > 0);
-  if (!overdues.length) return showToast('Semua Lunas!', 'Tidak ada tagihan tertunda.');
-  const lines = overdues.map(b => `• ${b.couple}: Sisa ${formatRupiah(b.totalPrice - b.dpPaid)}`).join('\n');
-  copyTextToClipboard(`Halo Kak, pengingat sisa pelunasan *${appState.studioProfile.brandName}*:\n\n${lines}\n\nRekening: ${appState.studioProfile.bankInfo}`, 'Pengingat WA Disalin!');
-}
-
-// ==================== MENU 2: BOOKING & KALENDER ====================
-function setBookingView(view) {
-  appState.bookingView = view;
-  saveState();
-  document.getElementById('booking-list-container').classList.toggle('hidden', view !== 'list');
-  document.getElementById('booking-calendar-container').classList.toggle('hidden', view === 'list');
-}
-
-function renderBookingCategoryChips() {
-  const container = document.getElementById('booking-category-chips');
-  if (!container) return;
-  const cats = ['Semua', ...appState.serviceCategories.filter(c => !c.startsWith('Add-On'))];
-  container.innerHTML = cats.map(cat => `
-    <button onclick="filterBookingCategory('${cat}')" class="px-3 py-1.5 rounded-full text-xs font-semibold transition ${appState.bookingFilter === cat ? 'bg-espresso text-white' : 'bg-white border border-[#DEC9B5] text-espresso'}">${cat}</button>
-  `).join('');
-}
-
-function filterBookingCategory(cat) {
-  appState.bookingFilter = cat;
-  saveState();
-  renderBookingCategoryChips();
-  renderBookingsList();
-}
-
-function renderBookingsList() {
-  const container = document.getElementById('booking-list-container');
-  if (!container) return;
-  const filtered = appState.bookingFilter === 'Semua' ? appState.bookings : appState.bookings.filter(b => b.category === appState.bookingFilter);
-  const stageNames = ['1. DP 30%', '2. Persiapan', '3. Liputan', '4. Serah File'];
-
-  container.innerHTML = filtered.map(b => {
-    const remaining = Math.max(0, b.totalPrice - b.dpPaid);
-    return `
-      <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-warm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <span class="px-2 py-0.5 rounded-lg bg-beige text-terracotta font-mono text-xs font-bold">${b.day} ${b.month}</span>
-              <span class="px-2 py-0.5 rounded-lg bg-cream border border-[#DEC9B5] text-xs font-semibold">${b.category}</span>
-            </div>
-            <h3 class="font-editorial text-lg sm:text-xl font-bold text-espresso mt-1">${b.couple}</h3>
-            <p class="text-xs text-espressoMuted">📍 ${b.venue} (${b.gatherTime}) • ${b.serviceType}</p>
-          </div>
-          <div class="sm:text-right">
-            <span class="inline-block px-3 py-1 rounded-full text-xs font-bold ${remaining === 0 ? 'bg-sageLight text-sage' : 'bg-amberLight text-amberWarn'}">${remaining === 0 ? 'LUNAS' : 'Sisa ' + formatRupiah(remaining)}</span>
-            <p class="font-mono text-xs text-espressoMuted mt-1">Total: <strong>${formatRupiah(b.totalPrice)}</strong> • DP: <strong>${formatRupiah(b.dpPaid)}</strong></p>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-2xl bg-driveLight/60 border border-[#C6DAFC] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-          <input type="text" value="${b.driveUrl || ''}" onchange="updateBookingDriveUrl('${b.id}', this.value)" class="flex-1 min-w-0 bg-white px-3 py-1.5 rounded-xl border border-[#B2CCF7] font-mono text-xs text-driveBlue" />
-          <button onclick="copyClientDriveLink('${b.id}')" class="px-3 py-1.5 rounded-xl bg-driveBlue text-white text-xs font-semibold shrink-0">Salin Link GDrive</button>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-          ${stageNames.map((lbl, idx) => {
-            const step = idx + 1;
-            const done = step <= b.stage;
-            return `<button onclick="advanceBookingStage('${b.id}', ${step})" class="py-2 px-2 rounded-xl text-[11px] font-bold border ${done ? 'bg-terracotta text-white border-terracotta' : 'bg-cream text-espressoMuted border-[#DEC9B5]'}">${done ? '✓ ' : ''}${lbl}</button>`;
-          }).join('')}
-        </div>
-
-        <div class="pt-2 border-t border-[#F2E6D8] flex flex-wrap items-center justify-between gap-2">
-          <span class="text-[11px] font-mono text-espressoMuted">Media: <strong>${b.memoryCardCode}</strong></span>
-          <div class="flex gap-2">
-            <button onclick="jumpToInvoice('${b.id}')" class="px-3 py-1.5 rounded-xl bg-beige text-espresso text-xs font-semibold">Invoice</button>
-            <button onclick="jumpToCrew('${b.id}')" class="px-3 py-1.5 rounded-xl bg-beige text-espresso text-xs font-semibold">Kru & Shareloc</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function updateBookingDriveUrl(id, url) {
-  const b = appState.bookings.find(x => x.id === id);
-  if (b) { b.driveUrl = url.trim(); saveState(); showToast('Link GDrive Disimpan'); }
-}
-
-function copyClientDriveLink(id) {
-  const b = appState.bookings.find(x => x.id === id);
-  if (b) copyTextToClipboard(`Halo Kak *${b.couple}*, berikut link Google Drive dokumentasi *${appState.studioProfile.brandName}*:\n📂 ${b.driveUrl}`, 'Link Drive Disalin!');
-}
-
-function advanceBookingStage(id, stage) {
-  const b = appState.bookings.find(x => x.id === id);
-  if (b) { b.stage = stage; saveState(); renderBookingsList(); }
-}
-
-function jumpToInvoice(id) {
-  appState.selectedInvoiceClientId = id;
-  saveState();
-  renderInvoiceSection();
-  switchTab('invoice');
-}
-
-function jumpToCrew(id) {
-  appState.selectedCrewJobId = id;
-  saveState();
-  renderCrewSection();
-  switchTab('crew');
-}
-
-function renderFullOctoberCalendar() {
-  const grid = document.getElementById('full-calendar-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  for (let i = 0; i < 3; i++) grid.innerHTML += `<div class="min-h-[60px] rounded-xl bg-cream/40"></div>`;
-  for (let day = 1; day <= 31; day++) {
-    const b = appState.bookings.find(x => Number(x.day) === day);
-    if (b) {
-      grid.innerHTML += `<div onclick="setBookingView('list')" class="min-h-[60px] p-2 rounded-xl bg-terracotta text-white cursor-pointer"><div class="font-mono text-xs font-bold">${day}</div><div class="text-[10px] font-semibold truncate mt-1">${b.couple}</div></div>`;
-    } else {
-      grid.innerHTML += `<div onclick="openNewBookingModal(${day})" class="min-h-[60px] p-2 rounded-xl bg-cream border border-[#E6D5C3] cursor-pointer"><div class="font-mono text-xs font-bold">${day}</div><div class="text-[9px] text-sage font-bold mt-1">+ Slot</div></div>`;
-    }
-  }
-}
-
-// ==================== MENU 3: INVOICE OTOMATIS ====================
-function renderInvoiceSection() {
-  const select = document.getElementById('invoice-client-select');
-  if (!select) return;
-  select.innerHTML = appState.bookings.map(b => `<option value="${b.id}" ${b.id === appState.selectedInvoiceClientId ? 'selected' : ''}>${b.couple} (${b.day} ${b.month})</option>`).join('');
-
-  const plPicker = document.getElementById('invoice-pricelist-picker');
-  if (plPicker) {
-    plPicker.innerHTML = appState.pricelist.map(p => `<option value="${p.id}">[${p.category}] ${p.name} — ${formatRupiah(p.price)}</option>`).join('');
-  }
-
-  const client = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId) || appState.bookings[0];
-  if (!client) return;
-
-  document.getElementById('invoice-dp-input').value = client.dpPaid;
-  document.getElementById('invoice-items-editor').innerHTML = client.items.map((item, idx) => `
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-2xl bg-cream border border-[#DEC9B5]">
-      <label class="flex items-center gap-2 text-xs font-semibold text-espresso cursor-pointer flex-1 min-w-0">
-        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleInvoiceItem(${idx})" class="w-4 h-4 accent-[#9E5231] rounded shrink-0" />
-        <span class="truncate">${item.name}</span>
-      </label>
-      <input type="number" step="25000" value="${item.price}" oninput="updateInvoiceItemPrice(${idx}, this.value)" class="w-full sm:w-32 px-3 py-1.5 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-right text-espresso" />
-    </div>
-  `).join('');
-
-  const activeItems = client.items.filter(i => i.checked);
-  const subtotal = activeItems.reduce((sum, i) => sum + Number(i.price || 0), 0);
-  client.totalPrice = subtotal;
-  const remaining = Math.max(0, subtotal - Number(client.dpPaid || 0));
-
-  document.getElementById('inv-preview-brand').textContent = appState.studioProfile.brandName;
-  document.getElementById('inv-preview-city').textContent = `${appState.studioProfile.city} • WA: ${appState.studioProfile.adminWa}`;
-  document.getElementById('inv-number-display').textContent = `INV/FP/2026/${client.id.split('-').pop()}`;
-  document.getElementById('inv-client-name').textContent = client.couple;
-  document.getElementById('inv-client-date').textContent = `${client.day} ${client.month}`;
-  document.getElementById('inv-client-venue').textContent = client.venue;
-  document.getElementById('inv-client-drive').textContent = client.serviceType;
-
-  const badge = document.getElementById('inv-status-badge');
-  badge.className = remaining === 0 ? 'px-2.5 py-0.5 rounded-full bg-sageLight text-sage text-[10px] font-bold' : 'px-2.5 py-0.5 rounded-full bg-amberLight text-amberWarn text-[10px] font-bold';
-  badge.textContent = remaining === 0 ? 'LUNAS ✓' : 'BELUM LUNAS';
-
-  document.getElementById('inv-preview-lines').innerHTML = activeItems.map(i => `
-    <div class="flex justify-between gap-2 text-xs">
-      <span class="text-espresso font-medium">${i.name}</span>
-      <span class="font-mono font-semibold text-espresso shrink-0">${formatRupiah(i.price)}</span>
-    </div>
-  `).join('');
-
-  document.getElementById('inv-subtotal').textContent = formatRupiah(subtotal);
-  document.getElementById('inv-dp-display').textContent = '- ' + formatRupiah(client.dpPaid);
-  document.getElementById('inv-remaining').textContent = formatRupiah(remaining);
-  document.getElementById('inv-bank-display').textContent = appState.studioProfile.bankInfo;
-
-  calculateFinancialSummary();
-}
-
-function selectInvoiceClient(id) { appState.selectedInvoiceClientId = id; saveState(); renderInvoiceSection(); }
-function toggleInvoiceItem(idx) {
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (c) { c.items[idx].checked = !c.items[idx].checked; saveState(); renderInvoiceSection(); }
-}
-function updateInvoiceItemPrice(idx, val) {
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (c) { c.items[idx].price = Number(val) || 0; saveState(); renderInvoiceSection(); }
-}
-function addPricelistToCurrentInvoice() {
-  const chosen = appState.pricelist.find(p => p.id === document.getElementById('invoice-pricelist-picker').value);
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (chosen && c) { c.items.push({ name: chosen.name, price: chosen.price, checked: true }); saveState(); renderInvoiceSection(); }
-}
-function addCustomInvoiceItem() {
-  const name = document.getElementById('custom-item-name').value.trim();
-  const price = Number(document.getElementById('custom-item-price').value) || 0;
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (name && price > 0 && c) {
-    c.items.push({ name, price, checked: true });
-    document.getElementById('custom-item-name').value = '';
-    document.getElementById('custom-item-price').value = '';
-    saveState();
-    renderInvoiceSection();
-  }
-}
-function setThirtyPercentDP() {
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (c) { c.dpPaid = Math.round((c.totalPrice * 0.3) / 1000) * 1000; saveState(); renderInvoiceSection(); }
-}
-function updateInvoiceDP(val) {
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (c) { c.dpPaid = Number(val) || 0; saveState(); renderInvoiceSection(); }
-}
-function updateInvoiceBank(val) {
-  appState.studioProfile.bankInfo = val;
-  saveState();
-  document.getElementById('inv-bank-display').textContent = val;
-}
-function copyInvoiceWhatsApp() {
-  const c = appState.bookings.find(b => b.id === appState.selectedInvoiceClientId);
-  if (!c) return;
-  const rem = Math.max(0, c.totalPrice - c.dpPaid);
-  const lines = c.items.filter(i => i.checked).map(i => `• ${i.name}: ${formatRupiah(i.price)}`).join('\n');
-  copyTextToClipboard(`*INVOICE RESMI — ${appState.studioProfile.brandName}*\nKlien: *${c.couple}*\nJadwal: ${c.day} ${c.month} (${c.venue})\n\n${lines}\n\nTotal: *${formatRupiah(c.totalPrice)}*\nDP: *${formatRupiah(c.dpPaid)}*\n*Sisa Pelunasan: ${formatRupiah(rem)}*\n\n📂 Link GDrive: ${c.driveUrl}\nInfo WA: ${appState.studioProfile.adminWa}`, 'Invoice WA Disalin!');
-}
-
-// ==================== MENU 4: JADWAL KRU, FEE & SHARELOC (RAPI 100% DI IPHONE) ====================
-function renderCrewSection() {
-  const select = document.getElementById('crew-job-select');
-  if (!select) return;
-  select.innerHTML = appState.bookings.map(b => `<option value="${b.id}" ${b.id === appState.selectedCrewJobId ? 'selected' : ''}>${b.couple} (${b.day} ${b.month})</option>`).join('');
-
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId) || appState.bookings[0];
-  if (!job) return;
-
-  document.getElementById('crew-panel-title').textContent = `Tim Liputan • ${job.couple} (${job.day} ${job.month})`;
-  document.getElementById('crew-venue-input').value = job.venue;
-  document.getElementById('crew-time-input').value = job.gatherTime;
-  document.getElementById('crew-card-input').value = job.memoryCardCode || 'Card #A1';
-
-  const emptyCount = job.crew.filter(c => c.assignee === 'Kosong').length;
-  const badge = document.getElementById('crew-shortage-badge');
-  badge.className = emptyCount > 0 ? 'px-3 py-1 rounded-full bg-dangerLight text-danger text-xs font-bold inline-flex items-center gap-1' : 'px-3 py-1 rounded-full bg-sageLight text-sage text-xs font-bold inline-flex items-center gap-1';
-  badge.innerHTML = emptyCount > 0 ? `⚠️ ${emptyCount} Posisi Kosong` : `✓ Tim Lengkap`;
-
-  const masterNames = ['Kosong', ...appState.crewMaster.map(cm => cm.name)];
-
-  document.getElementById('crew-roles-list').innerHTML = job.crew.map((c, idx) => {
-    const isEmpty = c.assignee === 'Kosong';
-    return `
-      <div class="p-3.5 rounded-2xl border ${isEmpty ? 'bg-dangerLight/40 border-danger' : 'bg-cream border-[#DEC9B5]'} space-y-2.5 w-full">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl ${isEmpty ? 'bg-danger text-white' : 'bg-terracotta text-white'} flex items-center justify-center font-bold text-xs shrink-0">
-            ${isEmpty ? '?' : c.assignee.charAt(0)}
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-xs font-bold text-espresso truncate">${c.role}</p>
-            <p class="text-[11px] truncate ${isEmpty ? 'text-danger font-semibold' : 'text-espressoMuted'}">
-              ${isEmpty ? 'Belum ada kru ditugaskan!' : 'Personel: ' + c.assignee}
-            </p>
-          </div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
-          <select onchange="assignCrewMember(${idx}, this.value)" class="w-full sm:flex-1 min-w-0 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold text-espresso">
-            ${masterNames.map(opt => `<option value="${opt}" ${opt === c.assignee ? 'selected' : ''}>${opt}</option>`).join('')}
-          </select>
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <input type="number" step="25000" value="${c.fee}" oninput="updateCrewFee(${idx}, this.value)" class="flex-1 sm:w-28 min-w-0 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs font-bold text-right text-espresso" />
-            <button onclick="removeCrewRoleFromJob(${idx})" class="w-8 h-8 rounded-xl bg-white border border-[#DEC9B5] text-espressoMuted hover:text-danger flex items-center justify-center shrink-0" title="Hapus posisi">✕</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  const totalFee = job.crew.reduce((acc, c) => acc + Number(c.fee || 0), 0);
-  document.getElementById('crew-total-fee').textContent = formatRupiah(totalFee);
-  document.getElementById('crew-net-profit').textContent = formatRupiah(Math.max(0, job.totalPrice - totalFee));
-
-  updateSharelocPreviewText(job);
-  calculateFinancialSummary();
-}
-
-function selectCrewJob(id) { appState.selectedCrewJobId = id; saveState(); renderCrewSection(); }
-
-function assignCrewMember(roleIdx, personName) {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (!job) return;
-  job.crew[roleIdx].assignee = personName;
-  const foundMaster = appState.crewMaster.find(cm => cm.name === personName);
-  if (foundMaster && foundMaster.defaultFee >= 0) job.crew[roleIdx].fee = foundMaster.defaultFee;
-  saveState();
-  renderCrewSection();
-}
-
-function updateCrewFee(roleIdx, val) {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (job) { job.crew[roleIdx].fee = Number(val) || 0; saveState(); renderCrewSection(); }
-}
-
-function addExtraRoleToCurrentJob() {
-  const input = document.getElementById('job-extra-role-input');
-  const roleName = input.value.trim();
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (roleName && job) {
-    job.crew.push({ role: roleName, assignee: 'Kosong', fee: 300000 });
-    input.value = '';
-    saveState();
-    renderCrewSection();
-  }
-}
-
-function removeCrewRoleFromJob(idx) {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (job) { job.crew.splice(idx, 1); saveState(); renderCrewSection(); }
-}
-
-function updateCrewVenue(val) {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (job) { job.venue = val; saveState(); updateSharelocPreviewText(job); }
-}
-
-function updateCrewTime(val) {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (job) { job.gatherTime = val; saveState(); updateSharelocPreviewText(job); }
-}
-
-function updateCrewCardCode(val) {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (job) { job.memoryCardCode = val; saveState(); updateSharelocPreviewText(job); }
-}
-
-function updateSharelocPreviewText(job) {
-  const crewLines = job.crew.map(c => `• ${c.role}: ${c.assignee}`).join('\n');
-  document.getElementById('shareloc-preview-text').textContent =
-    `📍 Lokasi: ${job.venue}\n⏰ Standby: ${job.gatherTime} (${job.day} ${job.month})\n📦 Paket: ${job.serviceType}\n💾 Media: ${job.memoryCardCode}\n🔗 Maps: ${job.mapsUrl}\n\nTim Bertugas:\n${crewLines}`;
-}
-
-function sendSharelocToAllCrew() {
-  const job = appState.bookings.find(b => b.id === appState.selectedCrewJobId);
-  if (!job) return;
-  const crewLines = job.crew.map(c => `• ${c.role}: *${c.assignee}* (${formatRupiah(c.fee)})`).join('\n');
-  copyTextToClipboard(`*BRIEFING & SHARELOC KRU — ${appState.studioProfile.brandName}*\nKlien: *${job.couple}*\nPaket: ${job.serviceType}\nJadwal: ${job.day} ${job.month} (Standby ${job.gatherTime})\nLokasi: *${job.venue}*\nMaps: ${job.mapsUrl}\nMedia: *${job.memoryCardCode}*\n\n*Tim Bertugas:*\n${crewLines}`, 'Shareloc Kru Disalin!');
-}
-
-// ==================== MENU 5: GEAR & MEMORY CARD ====================
-function renderGearSection() {
-  const mcGrid = document.getElementById('memory-card-grid');
-  if (mcGrid) {
-    mcGrid.innerHTML = appState.memoryCards.map((mc, idx) => {
-      const warn = mc.status.includes('Belum');
-      return `
-        <div onclick="cycleMemoryCardStatus(${idx})" class="cursor-pointer bg-cream rounded-2xl border border-[#DEC9B5] p-4 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-mono text-xs font-bold text-espresso">${mc.code}</span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${warn ? 'bg-dangerLight text-danger' : 'bg-sageLight text-sage'}">${mc.status}</span>
-          </div>
-          <p class="text-xs font-bold text-espresso">${mc.jobName}</p>
-          <p class="text-[11px] text-espressoMuted font-mono">${mc.hddLocation}</p>
-        </div>
-      `;
-    }).join('');
-  }
-
-  const grid = document.getElementById('gear-grid');
-  if (grid) {
-    grid.innerHTML = appState.gearList.map((g, idx) => `
-      <div onclick="cycleGearStatus(${idx})" class="cursor-pointer bg-white rounded-2xl border border-[#E6D5C3] p-4 shadow-warm flex items-center justify-between gap-3">
-        <div>
-          <h4 class="font-bold text-xs sm:text-sm text-espresso">${g.name}</h4>
-          <p class="text-[11px] text-espressoMuted">Lokasi: ${g.holder}</p>
-          <span class="inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${g.status === 'Tersedia di Studio' ? 'bg-sageLight text-sage' : 'bg-amberLight text-amberWarn'}">${g.status}</span>
-        </div>
-        <i class="ph-bold ph-arrows-clockwise text-espressoMuted"></i>
-      </div>
-    `).join('');
-  }
-}
-
-function cycleMemoryCardStatus(idx) {
-  const order = ['Belum Backup - JANGAN FORMAT!', 'Sudah Backup ke HDD FILEPHOTOKU.STD', 'Aman - Siap Format Ulang'];
-  appState.memoryCards[idx].status = order[(order.indexOf(appState.memoryCards[idx].status) + 1) % order.length];
-  saveState();
-  renderGearSection();
-}
-
-function cycleGearStatus(idx) {
-  const order = ['Tersedia di Studio', 'Dibawa Liputan', 'Perlu Cek'];
-  appState.gearList[idx].status = order[(order.indexOf(appState.gearList[idx].status) + 1) % order.length];
-  saveState();
-  renderGearSection();
-}
-
-function returnAllGear() {
-  appState.gearList.forEach(g => { g.status = 'Tersedia di Studio'; });
-  saveState();
-  renderGearSection();
-  showToast('Semua Alat Kembali ke Studio!');
-}
-
-// ==================== MENU 6: SORTIR FOTO ====================
-function renderPhotoSortSection() {
-  const selectedPhotos = appState.photos.filter(p => p.selected);
-  document.getElementById('selected-photo-count').textContent = selectedPhotos.length;
-  document.getElementById('selected-photo-pills').textContent = selectedPhotos.length ? selectedPhotos.map(p => p.code).join(', ') : 'Belum ada file dipilih';
-
-  const list = appState.photoSortFilter === 'selected' ? selectedPhotos : appState.photos;
-  const grid = document.getElementById('photo-sort-grid');
-  if (!grid) return;
-
-  grid.innerHTML = list.map(p => `
-    <div class="rounded-2xl overflow-hidden border-2 ${p.selected ? 'border-terracotta bg-[#FDF8F3]' : 'border-[#E6D5C3] bg-white'}">
-      <div onclick="togglePhotoSelection('${p.code}')" class="relative h-40 bg-beige cursor-pointer">
-        <img src="${p.img}" alt="${p.title}" class="w-full h-full object-cover" />
-        <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-white font-mono text-xs font-bold">${p.code}</span>
-      </div>
-      <div class="p-3 space-y-1.5">
-        <p class="text-xs font-bold text-espresso truncate">${p.title}</p>
-        <input type="text" value="${p.note || ''}" onchange="updatePhotoNote('${p.code}', this.value)" class="w-full px-2 py-1 rounded bg-cream border border-[#DEC9B5] text-[11px]" />
-      </div>
-    </div>
-  `).join('');
-}
-
-function togglePhotoSelection(code) {
-  const p = appState.photos.find(x => x.code === code);
-  if (p) { p.selected = !p.selected; saveState(); renderPhotoSortSection(); }
-}
-
-function updatePhotoNote(code, val) {
-  const p = appState.photos.find(x => x.code === code);
-  if (p) { p.note = val; saveState(); }
-}
-
-function setPhotoSortFilter(mode) {
-  appState.photoSortFilter = mode;
-  saveState();
-  renderPhotoSortSection();
-}
-
-function copySelectedPhotoCodes() {
-  const selected = appState.photos.filter(p => p.selected);
-  copyTextToClipboard(selected.map(p => p.code).join(', '), 'Kode File Disalin ke Lightroom!');
-}
-
-// ==================== MENU 7: HALAMAN KLIEN, KATALOG PRICELIST & BOOKING ====================
-function renderWebsiteAndVendors() {
-  const prof = appState.studioProfile;
-  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setTxt('pub-mockup-city', `⭐ 4.9 • ${prof.city}`);
-  setTxt('pub-mockup-tagline', prof.tagline);
-
-  const mainServices = appState.serviceCategories.filter(c => !c.startsWith('Add-On'));
-  const btnContainer = document.getElementById('pub-service-buttons');
-  if (btnContainer) {
-    btnContainer.innerHTML = mainServices.map(srv => {
-      const active = appState.selectedPublicService === srv;
-      return `<button onclick="selectPublicService('${srv}')" class="p-2.5 rounded-xl border-2 text-xs ${active ? 'border-terracotta bg-cream text-espresso font-bold' : 'border-[#E6D5C3] text-espressoMuted font-semibold'}">📸 ${srv}</button>`;
-    }).join('');
-  }
-
-  const matchingPkgs = appState.pricelist.filter(p => p.category === appState.selectedPublicService);
-  const listToShow = matchingPkgs.length > 0 ? matchingPkgs : appState.pricelist;
-
-  const pkgSelect = document.getElementById('pub-package-select');
-  if (pkgSelect) {
-    pkgSelect.innerHTML = listToShow.map(p => `<option value="${p.id}">${p.name} — ${formatRupiah(p.price)}</option>`).join('');
-  }
-
-  // Render Katalog Pricelist Lengkap untuk Konsumen
-  const catalogEl = document.getElementById('public-catalog-cards');
-  if (catalogEl) {
-    catalogEl.innerHTML = listToShow.map(p => `
-      <div class="p-4 rounded-2xl bg-cream border border-[#DEC9B5] flex flex-col justify-between gap-3">
-        <div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="px-2.5 py-0.5 rounded-full bg-beige text-terracotta text-[10px] font-bold uppercase">${p.category}</span>
-            <span class="font-mono text-sm font-bold text-terracotta">${formatRupiah(p.price)}</span>
-          </div>
-          <h4 class="font-bold text-sm text-espresso mt-2">${p.name}</h4>
-          <p class="text-xs text-espressoMuted mt-1 leading-relaxed">${p.desc || ''}</p>
-        </div>
-        <button onclick="chooseCatalogPackage('${p.id}')" class="w-full py-2 rounded-xl bg-white hover:bg-terracotta hover:text-white border border-[#DEC9B5] text-espresso text-xs font-bold transition">
-          Pilih Paket Ini →
-        </button>
-      </div>
-    `).join('');
-  }
-
-  const vendorEl = document.getElementById('vendor-ecosystem-list');
-  if (vendorEl) {
-    vendorEl.innerHTML = appState.vendors.map((v, idx) => `
-      <label class="cursor-pointer p-3.5 rounded-2xl border-2 ${v.checkedInBundle ? 'border-terracotta bg-cream' : 'border-[#E6D5C3] bg-white'} flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <input type="checkbox" ${v.checkedInBundle ? 'checked' : ''} onchange="toggleVendorBundle(${idx})" class="w-4 h-4 accent-[#9E5231] rounded shrink-0" />
-          <div class="min-w-0">
-            <span class="text-[10px] font-bold uppercase text-terracotta">${v.role}</span>
-            <h4 class="font-bold text-xs text-espresso truncate">${v.name}</h4>
-          </div>
-        </div>
-        <span class="font-mono text-xs font-bold text-espresso shrink-0">${formatRupiah(v.fee)}</span>
-      </label>
-    `).join('');
-  }
-
-  const activeVendors = appState.vendors.filter(v => v.checkedInBundle);
-  const bundleSum = activeVendors.reduce((acc, v) => acc + Number(v.fee || 0), 0);
-  setTxt('bundle-total-price', formatRupiah(bundleSum));
-  setTxt('bundle-selected-count', `${activeVendors.length} Layanan Tergabung`);
-}
-
-function selectPublicService(srvName) {
-  appState.selectedPublicService = srvName;
-  saveState();
-  renderWebsiteAndVendors();
-}
-
-function chooseCatalogPackage(pkgId) {
-  const pkgSelect = document.getElementById('pub-package-select');
-  if (pkgSelect) pkgSelect.value = pkgId;
-  document.getElementById('pub-client-name').focus();
-  showToast('Paket Dipilih', 'Silakan lengkapi nama dan tanggal acara pada formulir booking.');
-}
-
-function submitPublicBooking() {
-  const name = document.getElementById('pub-client-name').value.trim();
-  const day = Number(document.getElementById('pub-client-day').value) || 28;
-  const venue = document.getElementById('pub-client-venue').value.trim() || 'Banyuwangi';
-  const pkgId = document.getElementById('pub-package-select').value;
-  const chosenPkg = appState.pricelist.find(p => p.id === pkgId) || appState.pricelist[0];
-
-  if (!name) return showToast('Nama Belum Diisi', 'Mohon isi nama Anda terlebih dahulu.');
-
-  const price = chosenPkg ? chosenPkg.price : 1490000;
-  const dp30 = Math.round((price * 0.3) / 1000) * 1000;
-  const pkgName = chosenPkg ? chosenPkg.name : appState.selectedPublicService;
-
-  const newId = `FP-JOB-0${appState.bookings.length + 1}`;
-  appState.bookings.unshift({
-    id: newId,
-    couple: name,
-    day: Math.min(31, Math.max(1, day)),
-    month: 'Okt 2026',
-    dueDate: `${day} Okt 2026`,
-    category: appState.selectedPublicService,
-    serviceType: pkgName,
-    venue,
-    mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(venue),
-    gatherTime: '07.00 WIB',
-    driveUrl: `https://drive.google.com/drive/folders/filephotoku-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-    stage: 1,
-    fileStage: 1,
-    memoryCardCode: 'Card #A1',
-    totalPrice: price,
-    dpPaid: dp30,
-    isOverdue: false,
-    items: [{ name: pkgName, price, checked: true }],
-    crew: [{ role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
-  });
-
-  document.getElementById('pub-client-name').value = '';
-  document.getElementById('pub-client-day').value = '';
-  document.getElementById('pub-client-venue').value = '';
-  saveState();
-  renderAll();
-
-  const waText = encodeURIComponent(`Halo Admin *FILEPHOTOKU.STD*, saya ingin booking dokumentasi:\n\n• Nama: *${name}*\n• Paket: *${pkgName}* (${formatRupiah(price)})\n• Tanggal: *${day} Oktober 2026*\n• Lokasi: *${venue}*\n• Estimasi DP 30%: *${formatRupiah(dp30)}*\n\nMohon info ketersediaan slotnya Kak, terima kasih!`);
-  window.open(`https://wa.me/6285708001457?text=${waText}`, '_blank');
-}
-
-function toggleVendorBundle(idx) {
-  appState.vendors[idx].checkedInBundle = !appState.vendors[idx].checkedInBundle;
-  saveState();
-  renderWebsiteAndVendors();
-}
-
-function copyBundleProposal() {
-  const selected = appState.vendors.filter(v => v.checkedInBundle);
-  const total = selected.reduce((acc, v) => acc + v.fee, 0);
-  const list = selected.map(v => `• ${v.role} (${v.name}): ${formatRupiah(v.fee)}`).join('\n');
-  copyTextToClipboard(`*SIMULASI PAKET BUNDLING — ${appState.studioProfile.brandName}*\n\n${list}\n\n*Total: ${formatRupiah(total)}*`, 'Simulasi Bundling Disalin!');
-}
-
-// ==================== PENCARIAN & MODAL BOOKING BARU ====================
-function handleGlobalSearch(query) {
-  const box = document.getElementById('global-search-results');
-  const q = (query || '').trim().toLowerCase();
-  if (!q) { box.classList.add('hidden'); return; }
-
-  const matched = appState.bookings.filter(b => b.couple.toLowerCase().includes(q) || b.serviceType.toLowerCase().includes(q));
-  if (!matched.length) {
-    box.innerHTML = `<p class="text-xs text-espressoMuted p-2">Tidak ditemukan hasil untuk "${query}".</p>`;
-  } else {
-    box.innerHTML = matched.map(b => `
-      <div onclick="jumpToInvoice('${b.id}'); document.getElementById('global-search-results').classList.add('hidden');" class="p-2.5 rounded-xl hover:bg-cream cursor-pointer flex justify-between items-center text-xs">
-        <div><strong>${b.couple}</strong> (${b.day} ${b.month})<div class="text-[10px] text-espressoMuted">${b.serviceType}</div></div>
-        <span class="font-mono font-bold text-terracotta">${formatRupiah(b.totalPrice)}</span>
-      </div>
-    `).join('');
-  }
-  box.classList.remove('hidden');
-}
-
-function quickSearchDemo() {
-  const input = document.getElementById('global-search');
-  input.value = 'Diajeng';
-  handleGlobalSearch('Diajeng');
-}
-
-function openNewBookingModal(prefillDay = 28) {
-  document.getElementById('modal-day-input').value = prefillDay;
-  const catSel = document.getElementById('modal-category-input');
-  catSel.innerHTML = appState.serviceCategories.filter(c => !c.startsWith('Add-On')).map(c => `<option value="${c}">${c}</option>`).join('');
-  filterModalPackagesByCategory();
-  document.getElementById('modal-new-booking').classList.remove('hidden');
-}
-
-function filterModalPackagesByCategory() {
-  const chosenCat = document.getElementById('modal-category-input').value;
-  const pkgSel = document.getElementById('modal-package-select');
-  const filtered = appState.pricelist.filter(p => p.category === chosenCat);
-  pkgSel.innerHTML = (filtered.length ? filtered : appState.pricelist).map(p => `<option value="${p.id}">${p.name} — ${formatRupiah(p.price)}</option>`).join('');
-  applySelectedPackageToModal();
-}
-
-function applySelectedPackageToModal() {
-  const found = appState.pricelist.find(p => p.id === document.getElementById('modal-package-select').value);
-  if (found) {
-    document.getElementById('modal-price-input').value = found.price;
-    document.getElementById('modal-dp-input').value = Math.round((found.price * 0.3) / 1000) * 1000;
-  }
-}
-
-function autoCalcModalDP() {
-  const price = Number(document.getElementById('modal-price-input').value) || 0;
-  document.getElementById('modal-dp-input').value = Math.round((price * 0.3) / 1000) * 1000;
-}
-
-function closeNewBookingModal() { document.getElementById('modal-new-booking').classList.add('hidden'); }
-
-function saveNewBooking() {
-  const couple = document.getElementById('modal-couple-input').value.trim();
-  if (!couple) return showToast('Nama Klien Kosong');
-  const day = Number(document.getElementById('modal-day-input').value) || 28;
-  const category = document.getElementById('modal-category-input').value;
-  const chosenPkg = appState.pricelist.find(p => p.id === document.getElementById('modal-package-select').value);
-  const serviceName = chosenPkg ? chosenPkg.name : category;
-  const venue = document.getElementById('modal-venue-input').value.trim() || 'Banyuwangi';
-  const price = Number(document.getElementById('modal-price-input').value) || 1490000;
-  const dp = Number(document.getElementById('modal-dp-input').value) || 450000;
-
-  appState.bookings.unshift({
-    id: `FP-JOB-0${appState.bookings.length + 1}`,
-    couple,
-    day,
-    month: 'Okt 2026',
-    dueDate: `${day} Okt 2026`,
-    category,
-    serviceType: serviceName,
-    venue,
-    mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(venue),
-    gatherTime: '06.30 WIB',
-    driveUrl: document.getElementById('modal-drive-input').value.trim() || `https://drive.google.com/drive/folders/filephotoku-${couple.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-    stage: 1,
-    fileStage: 1,
-    memoryCardCode: 'Card #A1',
-    totalPrice: price,
-    dpPaid: dp,
-    isOverdue: false,
-    items: [{ name: serviceName, price, checked: true }],
-    crew: [{ role: 'Fotografer Utama (FILEPHOTOKU.STD)', assignee: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
-  });
-
-  closeNewBookingModal();
-  saveState();
-  renderAll();
-  switchTab('booking');
-  showToast('Booking Tersimpan!', couple);
-}
-
-function openResetModal() { document.getElementById('modal-reset').classList.remove('hidden'); }
-function closeResetModal() { document.getElementById('modal-reset').classList.add('hidden'); }
-function confirmResetAllData() {
-  localStorage.removeItem(STORAGE_KEY);
-  appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  appState.isUnlocked = true;
-  saveState();
-  closeResetModal();
-  renderAll();
-  showToast('Data Direset ke Default!');
-}
-
-function renderAll() {
-  renderSetupMaster();
-  calculateFinancialSummary();
-  renderDashboardFileTracker();
-  renderMiniOctoberCalendar();
-  renderBookingCategoryChips();
-  renderBookingsList();
-  renderFullOctoberCalendar();
-  renderInvoiceSection();
-  renderCrewSection();
-  renderGearSection();
-  renderPhotoSortSection();
-  renderWebsiteAndVendors();
-}
-
-window.onload = function () {
-  renderAll();
-  syncFromCloud(); // Otomatis tarik booking terbaru dari Cloud saat dibuka!
-
-  // Cek pembaruan data dari Cloud setiap 15 detik secara otomatis
-  setInterval(syncFromCloud, 15000);
-
-  if (appState.isUnlocked) {
-    document.body.classList.remove('public-client-mode');
-    switchTab(appState.activeTab || 'dashboard');
-  } else {
-    document.body.classList.add('public-client-mode');
-    switchTab('website');
-  }
-  switchSetupSubTab(appState.setupSubTab || 'pricelist');
-  setBookingView(appState.bookingView || 'list');
-/* ============================================================================
-   PERBAIKAN OTOMATIS DATA CRASH, SIDEBAR ADMIN, SYNC SERVER & TRANSAKSI QRIS
-   ============================================================================ */
-
-const FP_FIREBASE_URL = 'https://filephotoku-db-default-rtdb.asia-southeast1.firebasedatabase.app';
-
-// 1. Perbaiki Struktur Booking agar renderAll() Tidak Pernah Macet/Crash Lagi
-function normalizeBookingItem(rawBooking) {
-  const template = (typeof DEFAULT_STATE !== 'undefined' && Array.isArray(DEFAULT_STATE.bookings) && DEFAULT_STATE.bookings[0])
-    ? JSON.parse(JSON.stringify(DEFAULT_STATE.bookings[0]))
-    : {};
-
-  const item = Object.assign({}, template, rawBooking || {});
-
-  // Pastikan semua properti Array/Object sesuai dengan template asli di data.js
-  Object.keys(template).forEach(key => {
-    const tmplVal = template[key];
-    const curVal = item[key];
-    if (Array.isArray(tmplVal)) {
-      if (!Array.isArray(curVal)) {
-        item[key] = typeof curVal === 'string' && curVal.trim() !== ''
-          ? curVal.split(',').map(s => s.trim()).filter(Boolean)
-          : [];
-      }
-    } else if (tmplVal && typeof tmplVal === 'object') {
-      item[key] = (curVal && typeof curVal === 'object' && !Array.isArray(curVal))
-        ? Object.assign({}, tmplVal, curVal)
-        : JSON.parse(JSON.stringify(tmplVal));
-    } else if (typeof tmplVal === 'number') {
-      item[key] = Number(curVal !== undefined && curVal !== null ? curVal : tmplVal) || 0;
-    }
-  });
-
-  item.id = String(item.id || ('BK-' + Date.now()));
-  item.client = item.client || item.clientName || 'Klien Baru';
-  item.clientName = item.clientName || item.client;
-  item.venue = item.venue || item.location || 'Banyuwangi';
-  item.location = item.location || item.venue;
-  if (!Array.isArray(item.selectedPhotos)) item.selectedPhotos = [];
-  if (!Array.isArray(item.crew) || item.crew.length === 0) {
-    item.crew = [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }];
-  }
-  return item;
-}
-
-function sanitizeAllBookings() {
-  if (typeof appState === 'undefined') return;
-  if (!Array.isArray(appState.bookings)) appState.bookings = [];
-  appState.bookings = appState.bookings.map(b => normalizeBookingItem(b));
-}
-
-// 2. Pengaturan Default Rekening & QRIS Studio
-function ensurePaymentConfig() {
-  if (typeof appState === 'undefined') return;
-  if (!appState.paymentConfig) {
-    appState.paymentConfig = {
-      bankName: 'BCA / BRI / Mandiri',
-      accountNumber: '1234567890',
-      accountHolder: 'FILEPHOTOKU.STD',
-      ewalletInfo: 'Dana / ShopeePay / GoPay: 085708001457',
-      qrisImageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=FILEPHOTOKU.STD-QRIS-PAYMENT'
-    };
-  }
-}
-
-// 3. Sinkronkan Tampilan Menu Sidebar Admin vs Halaman Klien Publik
-function applyStudioAccessMode() {
-  if (typeof appState === 'undefined') return;
-  const unlocked = Boolean(appState.isUnlocked || sessionStorage.getItem('FP_ADMIN_UNLOCKED') === 'true');
-  appState.isUnlocked = unlocked;
-
-  if (unlocked) {
-    document.body.classList.remove('public-client-mode');
-    document.querySelectorAll('.admin-only-ui').forEach(el => {
-      el.style.display = '';
-    });
-    document.querySelectorAll('.public-only-ui').forEach(el => {
-      el.style.display = 'none';
-    });
-    const active = (appState.activeTab && appState.activeTab !== 'website') ? appState.activeTab : 'dashboard';
-    if (typeof switchTab === 'function') switchTab(active);
-  } else {
-    document.body.classList.add('public-client-mode');
-    document.querySelectorAll('.public-only-ui').forEach(el => {
-      el.style.display = '';
-    });
-    if (typeof switchTab === 'function') switchTab('website');
-    const webSec = document.getElementById('tab-website');
-    if (webSec) {
-      document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
-      webSec.classList.add('active');
-    }
-  }
-}
-
-// 4. Perbaiki Login PIN Admin & Tombol Lock Mode Klien
 window.verifyAdminPin = function() {
-  const input = document.getElementById('admin-pin-input');
-  const pin = input ? input.value.trim() : '';
-  const validPin = (appState && appState.adminPin) ? String(appState.adminPin) : '2026';
-
-  if (pin === validPin || pin === '2026' || pin === '998877') {
+  const val = (document.getElementById('admin-pin-input').value || '').trim();
+  if (val === String(appState.adminPin || '2026') || val === '2026' || val === '998877') {
     appState.isUnlocked = true;
     appState.activeTab = 'dashboard';
-    sessionStorage.setItem('FP_ADMIN_UNLOCKED', 'true');
-    if (input) input.value = '';
-    if (typeof closeAdminLoginModal === 'function') closeAdminLoginModal();
-    sanitizeAllBookings();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-    applyStudioAccessMode();
-    safeRenderAll();
-    injectAdminPaymentToolbar();
+    document.body.classList.remove('public-client-mode');
+    closeAdminLoginModal();
+    saveState(false);
+    switchTab('dashboard');
+    renderAll();
+    showToast('Mode Admin Aktif!', 'Selamat bekerja di FILEPHOTOKU.STD Studio OS.');
   } else {
-    alert('PIN Admin tidak sesuai.');
+    alert('PIN salah! PIN default adalah 2026.');
   }
 };
 
 window.lockAdminSession = function() {
   appState.isUnlocked = false;
   appState.activeTab = 'website';
-  sessionStorage.removeItem('FP_ADMIN_UNLOCKED');
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-  applyStudioAccessMode();
-  safeRenderAll();
-  injectClientPaymentUI();
+  document.body.classList.add('public-client-mode');
+  saveState(false);
+  switchTab('website');
+  renderPublicWebsite();
 };
 
-// 5. Jalankan renderAll() dengan Pengaman Anti-Crash
-const originalRenderAll = window.renderAll;
-function safeRenderAll() {
-  try {
-    sanitizeAllBookings();
-    ensurePaymentConfig();
-    if (typeof originalRenderAll === 'function') {
-      originalRenderAll();
-    }
-  } catch (err) {
-    console.warn('Memulihkan render otomatis:', err);
+window.switchTab = function(tab) {
+  if (!appState.isUnlocked && tab !== 'website') {
+    tab = 'website';
   }
-  injectClientPaymentUI();
-  injectAdminPaymentToolbar();
-}
-window.renderAll = safeRenderAll;
+  appState.activeTab = tab;
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('tab-' + tab);
+  if (target) target.classList.add('active');
 
-// 6. Gabungkan Data Booking Lokal & Cloud Tanpa Menimpa
-function mergeBookingsList(localBookings = [], cloudBookings = []) {
-  const map = new Map();
-  cloudBookings.forEach(item => {
-    if (item && item.id) map.set(String(item.id), normalizeBookingItem(item));
+  document.querySelectorAll('.nav-btn, .mob-nav').forEach(btn => {
+    const isAct = btn.dataset.tab === tab;
+    btn.classList.toggle('bg-terracotta', isAct && btn.classList.contains('nav-btn'));
+    btn.classList.toggle('text-white', isAct && btn.classList.contains('nav-btn'));
+    btn.classList.toggle('text-terracotta', isAct && btn.classList.contains('mob-nav'));
   });
-  localBookings.forEach(item => {
-    if (!item || !item.id) return;
-    const clean = normalizeBookingItem(item);
-    const key = String(clean.id);
-    if (!map.has(key)) {
-      map.set(key, clean);
-    } else {
-      const existing = map.get(key);
-      if ((clean.updatedAt || 0) >= (existing.updatedAt || 0)) {
-        map.set(key, Object.assign({}, existing, clean));
-      }
-    }
-  });
-  return Array.from(map.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-}
-
-// 7. Simpan & Sinkronisasi ke Firebase
-let isSyncingCloud = false;
-
-window.saveState = async function(skipCloud = false) {
-  try {
-    sanitizeAllBookings();
-    ensurePaymentConfig();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-    if (skipCloud || isSyncingCloud || !FP_FIREBASE_URL) return;
-
-    let latestCloud = null;
-    try {
-      const checkRes = await fetch(`${FP_FIREBASE_URL}/studioData.json?t=${Date.now()}`);
-      if (checkRes.ok) latestCloud = await checkRes.json();
-    } catch (e) {}
-
-    if (latestCloud && Array.isArray(latestCloud.bookings)) {
-      appState.bookings = mergeBookingsList(appState.bookings, latestCloud.bookings);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-    }
-
-    const cloudPayload = JSON.parse(JSON.stringify(appState));
-    delete cloudPayload.isUnlocked;
-    delete cloudPayload.activeTab;
-
-    await fetch(`${FP_FIREBASE_URL}/studioData.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cloudPayload)
-    });
-  } catch (e) {
-    console.warn('Gagal simpan ke cloud:', e);
-  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  renderAll();
 };
 
-window.syncFromCloud = async function(showNotif = false) {
-  if (!FP_FIREBASE_URL) return;
-  try {
-    isSyncingCloud = true;
-    const res = await fetch(`${FP_FIREBASE_URL}/studioData.json?t=${Date.now()}`);
-    const cloudData = await res.json();
-
-    if (cloudData && Array.isArray(cloudData.bookings)) {
-      const keepUnlock = Boolean(appState.isUnlocked || sessionStorage.getItem('FP_ADMIN_UNLOCKED') === 'true');
-      const keepTab = appState.activeTab;
-      const keepFilter = appState.bookingFilter || 'All';
-      const keepView = appState.bookingView || 'list';
-
-      const mergedBookings = mergeBookingsList(appState.bookings || [], cloudData.bookings);
-
-      appState = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), cloudData);
-      appState.bookings = mergedBookings;
-      appState.isUnlocked = keepUnlock;
-      appState.activeTab = keepTab;
-      appState.bookingFilter = keepFilter;
-      appState.bookingView = keepView;
-      sanitizeAllBookings();
-      ensurePaymentConfig();
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-      safeRenderAll();
-      applyStudioAccessMode();
-
-      if (showNotif && typeof showToast === 'function') {
-        showToast('Server Tersinkronisasi', `Total ${mergedBookings.length} jadwal booking aktif.`);
-      }
-    }
-  } catch (e) {
-    console.warn('Koneksi cloud tertunda:', e);
-  } finally {
-    isSyncingCloud = false;
-  }
-};
-
-// 8. Komponen Pembayaran QRIS & Transfer Bank di Halaman Klien
-function injectClientPaymentUI() {
-  const venueInput = document.getElementById('pub-client-venue');
-  const pkgSelect = document.getElementById('pub-package-select');
-  if (!venueInput) return;
-  if (document.getElementById('pub-payment-box')) {
-    updateClientPaymentPreview();
-    return;
-  }
-
-  ensurePaymentConfig();
-  const formContainer = venueInput.closest('.space-y-3') || venueInput.parentElement.parentElement;
-
-  const paymentBox = document.createElement('div');
-  paymentBox.id = 'pub-payment-box';
-  paymentBox.className = 'pt-3 mt-3 border-t border-[#E6D5C3] space-y-3';
-  paymentBox.innerHTML = `
-    <div>
-      <label class="font-bold text-espresso uppercase block mb-1">Nomor WhatsApp Aktif</label>
-      <input id="pub-client-phone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso" />
-    </div>
-    <div class="grid grid-cols-2 gap-2.5">
-      <div>
-        <label class="font-bold text-espresso uppercase block mb-1">Opsi Pembayaran</label>
-        <select id="pub-payment-term" onchange="updateClientPaymentPreview()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-          <option value="DP 30%">DP 30% (Kunci Slot)</option>
-          <option value="Lunas 100%">Bayar Lunas (100%)</option>
-        </select>
-      </div>
-      <div>
-        <label class="font-bold text-espresso uppercase block mb-1">Metode Transaksi</label>
-        <select id="pub-payment-method" onchange="updateClientPaymentPreview()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-          <option value="QRIS">QRIS (Semua Bank/E-Wallet)</option>
-          <option value="Transfer Bank">Transfer Bank / E-Wallet</option>
-        </select>
-      </div>
-    </div>
-    <div id="pub-payment-instruction" class="p-3.5 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2.5 text-xs"></div>
-    <div>
-      <label class="font-bold text-espresso uppercase block mb-1">Status Konfirmasi Transaksi</label>
-      <select id="pub-payment-status-confirm" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-sage">
-        <option value="Menunggu Verifikasi (Siap Kirim Bukti di WA)">✅ Sudah Bayar / Siap Kirim Bukti di WA</option>
-        <option value="Belum DP (Booking Jadwal Dulu)">⏳ Booking Jadwal Dulu (Bayar Menyusul)</option>
-      </select>
-    </div>
-  `;
-
-  formContainer.appendChild(paymentBox);
-  if (pkgSelect) pkgSelect.addEventListener('change', updateClientPaymentPreview);
-  updateClientPaymentPreview();
-}
-
-window.updateClientPaymentPreview = function() {
-  ensurePaymentConfig();
-  const box = document.getElementById('pub-payment-instruction');
-  const pkgSelect = document.getElementById('pub-package-select');
-  const termSelect = document.getElementById('pub-payment-term');
-  const methodSelect = document.getElementById('pub-payment-method');
-  if (!box || !pkgSelect) return;
-
-  const allPackages = Array.isArray(appState.pricelist) ? appState.pricelist : [];
-  const pkg = allPackages.find(p => String(p.id) === String(pkgSelect.value)) || allPackages[0] || { name: 'Paket Pilihan', price: 0 };
-
-  const totalPrice = Number(pkg.price || 0);
-  const dpPrice = Math.round(totalPrice * 0.3);
-  const isFull = termSelect && termSelect.value === 'Lunas 100%';
-  const payAmount = isFull ? totalPrice : dpPrice;
-  const method = methodSelect ? methodSelect.value : 'QRIS';
-  const cfg = appState.paymentConfig;
-  const formatRp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
-
-  if (method === 'QRIS') {
-    box.innerHTML = `
-      <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
-        <span class="text-espressoMuted font-medium">Tagihan ${isFull ? 'Lunas (100%)' : 'DP 30%'}</span>
-        <span class="font-mono text-sm font-extrabold text-terracotta">${formatRp(payAmount)}</span>
-      </div>
-      <div class="text-center space-y-2 pt-1">
-        <div class="inline-block px-2.5 py-0.5 rounded-full bg-orange-100 text-[#9E5231] text-[10px] font-bold">SCAN QRIS RESMI FILEPHOTOKU.STD</div>
-        <div class="bg-white p-2.5 rounded-2xl border border-[#E6D5C3] inline-block mx-auto shadow-sm">
-          <img src="${cfg.qrisImageUrl}" alt="QRIS FILEPHOTOKU.STD" class="w-40 h-40 object-contain mx-auto rounded-lg" />
-        </div>
-        <p class="text-[11px] text-espressoMuted">Mendukung BCA, BRI, Mandiri, BNI, Dana, OVO, GoPay, & ShopeePay.</p>
-      </div>
-    `;
+window.doAdminSearch = function(goToBooking = false) {
+  searchKeyword = (document.getElementById('admin-search-input').value || '').trim().toLowerCase();
+  if (goToBooking && appState.activeTab !== 'booking') {
+    switchTab('booking');
   } else {
-    box.innerHTML = `
-      <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
-        <span class="text-espressoMuted font-medium">Tagihan ${isFull ? 'Lunas (100%)' : 'DP 30%'}</span>
-        <span class="font-mono text-sm font-extrabold text-terracotta">${formatRp(payAmount)}</span>
-      </div>
-      <div class="space-y-1.5 pt-1">
-        <div class="text-[11px] font-bold text-espresso uppercase">${cfg.bankName}</div>
-        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-[#DEC9B5]">
-          <div>
-            <div class="font-mono text-sm font-extrabold text-espresso">${cfg.accountNumber}</div>
-            <div class="text-[10px] text-espressoMuted">a.n. ${cfg.accountHolder}</div>
-          </div>
-          <button type="button" onclick="navigator.clipboard.writeText('${cfg.accountNumber}'); alert('Nomor rekening disalin!');" class="px-2.5 py-1 rounded-lg bg-beige text-espresso text-[11px] font-bold">Salin Rek</button>
-        </div>
-        <div class="text-[11px] text-espressoMuted">${cfg.ewalletInfo || ''}</div>
-      </div>
-    `;
+    renderBookings();
   }
 };
 
-// 9. Kirim Booking Klien dengan Struktur Data Lengkap (Anti-Error)
-window.submitPublicBooking = async function() {
+// --- RENDER MASTER (DILINDUNGI TRY/CATCH PER MODUL) ---
+function renderAll() {
+  const tasks = [
+    renderPublicWebsite,
+    renderDashboard,
+    renderBookings,
+    renderInvoice,
+    renderCrew,
+    renderPhotoSort,
+    renderSetup
+  ];
+  tasks.forEach(fn => {
+    try { fn(); } catch (err) { console.error('Render error pada', fn.name, err); }
+  });
+}
+
+// ============================================================================
+// 1. HALAMAN KLIEN (KATALOG, FORM TANGGAL LENGKAP, QRIS/BSI, BUNDLING)
+// ============================================================================
+function renderPublicWebsite() {
+  const mainCats = appState.categories.filter(c => !c.toLowerCase().includes('add-on'));
+  if (!mainCats.includes(appState.publicCategory)) {
+    appState.publicCategory = mainCats[0] || 'Wedding';
+  }
+
+  // 1. Tombol kategori
+  const btnWrap = document.getElementById('pub-service-buttons');
+  if (btnWrap) {
+    btnWrap.innerHTML = mainCats.map(cat => {
+      const act = cat === appState.publicCategory;
+      return `<button type="button" onclick="selectPublicCategory('${cat}')" class="px-3 py-2 rounded-xl text-xs font-bold transition border ${act ? 'bg-terracotta text-white border-terracotta shadow' : 'bg-cream text-espresso border-[#DEC9B5]'}">${cat}</button>`;
+    }).join('');
+  }
+
+  // 2. Kartu paket sesuai kategori aktif
+  const cardWrap = document.getElementById('public-catalog-cards');
+  if (cardWrap) {
+    const pkgs = appState.pricelist.filter(p => p.category === appState.publicCategory);
+    cardWrap.innerHTML = pkgs.length ? pkgs.map(p => `
+      <div class="p-4 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] flex flex-col justify-between gap-3">
+        <div>
+          <span class="text-[10px] font-bold uppercase text-terracotta">${p.category}</span>
+          <h4 class="font-bold text-sm text-espresso mt-0.5">${p.name}</h4>
+          <div class="font-mono text-base font-extrabold text-terracotta mt-1">${rp(p.price)}</div>
+          <p class="text-[11px] text-espressoMuted mt-1.5 leading-relaxed">${p.desc || ''}</p>
+        </div>
+        <button type="button" onclick="choosePublicPackage('${p.id}')" class="w-full py-2 rounded-xl bg-white hover:bg-terracotta hover:text-white border border-[#DEC9B5] text-espresso text-xs font-bold transition">
+          Pilih Paket Ini →
+        </button>
+      </div>
+    `).join('') : '<p class="text-xs text-espressoMuted">Belum ada paket pada kategori ini.</p>';
+  }
+
+  // 3. Dropdown Paket Pilihan di Formulir Booking
   const pkgSelect = document.getElementById('pub-package-select');
-  const nameInput = document.getElementById('pub-client-name');
-  const dayInput = document.getElementById('pub-client-day');
-  const venueInput = document.getElementById('pub-client-venue');
-  const phoneInput = document.getElementById('pub-client-phone');
-  const termSelect = document.getElementById('pub-payment-term');
-  const methodSelect = document.getElementById('pub-payment-method');
-  const statusSelect = document.getElementById('pub-payment-status-confirm');
+  if (pkgSelect) {
+    const prevVal = pkgSelect.value;
+    const cats = mainCats.length ? mainCats : appState.categories;
+    pkgSelect.innerHTML = cats.map(kat => {
+      const list = appState.pricelist.filter(p => p.category === kat);
+      if (!list.length) return '';
+      return `<optgroup label="${kat.toUpperCase()}">${list.map(p =>
+        `<option value="${p.id}">${p.name} — ${rp(p.price)}</option>`
+      ).join('')}</optgroup>`;
+    }).join('');
+    if (prevVal && appState.pricelist.some(p => p.id === prevVal)) {
+      pkgSelect.value = prevVal;
+    }
+  }
 
-  const clientName = (nameInput ? nameInput.value : '').trim();
-  const day = parseInt(dayInput ? dayInput.value : '0', 10);
-  const venue = (venueInput ? venueInput.value : '').trim() || 'Banyuwangi';
-  const clientPhone = (phoneInput ? phoneInput.value : '').trim() || '-';
-  const paymentTerm = termSelect ? termSelect.value : 'DP 30%';
-  const paymentMethod = methodSelect ? methodSelect.value : 'QRIS';
-  const paymentConfirm = statusSelect ? statusSelect.value : 'Menunggu Verifikasi';
+  // Default tanggal hari ini agar user mudah ubah bulan & tanggal
+  const dateInp = document.getElementById('pub-client-date');
+  if (dateInp && !dateInp.value) dateInp.value = todayISO();
 
-  if (!clientName || !day || day < 1 || day > 31) {
-    alert('Mohon lengkapi Nama dan Tanggal Acara (1-31) terlebih dahulu.');
+  updatePublicPaymentUI(false);
+  renderBundlingSection();
+}
+
+window.selectPublicCategory = function(cat) {
+  appState.publicCategory = cat;
+  renderPublicWebsite();
+};
+
+window.choosePublicPackage = function(pkgId) {
+  const sel = document.getElementById('pub-package-select');
+  if (sel) sel.value = pkgId;
+  updatePublicPaymentUI(false);
+  const formCard = document.getElementById('booking-form-card');
+  if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.updatePublicPaymentUI = function(forceRebuild = false) {
+  const box = document.getElementById('pub-payment-instruction');
+  const sel = document.getElementById('pub-package-select');
+  if (!box || !sel) return;
+
+  const pkg = appState.pricelist.find(p => p.id === sel.value) || appState.pricelist[0] || { price: 0 };
+  const total = Number(pkg.price) || 0;
+  const dpPct = Number(appState.studioInfo.dpPercent) || 30;
+  const term = document.getElementById('pub-payment-term').value;
+  const method = document.getElementById('pub-payment-method').value;
+  const nominal = term === 'Lunas 100%' ? total : Math.round(total * dpPct / 100);
+  const cfg = appState.paymentConfig;
+
+  if (forceRebuild || box.dataset.method !== method) {
+    box.dataset.method = method;
+    if (method === 'QRIS') {
+      const fbQr = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(cfg.merchantQris + ' ' + cfg.nmid)}`;
+      box.innerHTML = `
+        <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
+          <span id="pub-pay-label" class="text-espressoMuted font-semibold">Tagihan ${term}</span>
+          <span id="pub-pay-amount" class="font-mono text-sm font-extrabold text-terracotta">${rp(nominal)}</span>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+          <div class="bg-white p-2 rounded-2xl border border-[#E6D5C3] shrink-0">
+            <img src="${cfg.fileQris}" alt="QRIS" class="w-36 h-36 object-contain rounded-lg" onerror="if(!this.dataset.f){this.dataset.f='1';this.src='${fbQr}';}" />
+          </div>
+          <div class="text-center sm:text-left space-y-1">
+            <span class="inline-block px-2 py-0.5 rounded bg-orange-100 text-terracotta text-[10px] font-extrabold">QRIS GPN RESMI</span>
+            <div class="text-xs font-extrabold text-espresso">${cfg.merchantQris}</div>
+            <div class="text-[10px] font-mono text-espressoMuted">NMID: ${cfg.nmid}</div>
+            <p class="text-[10px] text-espressoMuted">Scan via M-Banking (BSI, BCA, BRI, Mandiri) atau DANA, GoPay, ShopeePay.</p>
+          </div>
+        </div>`;
+    } else {
+      box.innerHTML = `
+        <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
+          <span id="pub-pay-label" class="text-espressoMuted font-semibold">Tagihan ${term}</span>
+          <span id="pub-pay-amount" class="font-mono text-sm font-extrabold text-terracotta">${rp(nominal)}</span>
+        </div>
+        <div class="pt-1 space-y-1.5">
+          <div class="text-[11px] font-bold text-espresso uppercase">${cfg.bank}</div>
+          <div class="flex items-center justify-between bg-white px-3 py-2.5 rounded-xl border border-[#DEC9B5]">
+            <div>
+              <div class="font-mono text-sm font-extrabold text-espresso">${cfg.accountNumber}</div>
+              <div class="text-[10px] font-bold text-espressoMuted">A.N. ${cfg.accountHolder}</div>
+            </div>
+            <button type="button" onclick="navigator.clipboard.writeText('${cfg.accountNumber}'); showToast('Disalin!', 'No. Rekening ${cfg.accountNumber} disalin.');" class="px-3 py-1.5 rounded-lg bg-beige text-espresso text-[11px] font-bold">Salin Rek</button>
+          </div>
+        </div>`;
+    }
+  } else {
+    const lbl = document.getElementById('pub-pay-label');
+    const amt = document.getElementById('pub-pay-amount');
+    if (lbl) lbl.textContent = 'Tagihan ' + term;
+    if (amt) amt.textContent = rp(nominal);
+  }
+};
+
+window.handleProofUpload = function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      const max = 480;
+      let w = img.width, h = img.height;
+      if (w > h && w > max) { h = Math.round(h * max / w); w = max; }
+      else if (h > max) { w = Math.round(w * max / h); h = max; }
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      proofUploadBase64 = c.toDataURL('image/jpeg', 0.72);
+      document.getElementById('pub-proof-img').src = proofUploadBase64;
+      document.getElementById('pub-proof-preview').classList.remove('hidden');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearProofUpload = function() {
+  proofUploadBase64 = '';
+  document.getElementById('pub-payment-proof').value = '';
+  document.getElementById('pub-proof-preview').classList.add('hidden');
+};
+
+window.submitPublicBooking = async function() {
+  const client = (document.getElementById('pub-client-name').value || '').trim();
+  const dateISO = document.getElementById('pub-client-date').value;
+  const venue = (document.getElementById('pub-client-venue').value || '').trim() || 'Banyuwangi';
+  const phone = (document.getElementById('pub-client-phone').value || '').trim() || '-';
+  const pkgId = document.getElementById('pub-package-select').value;
+  const term = document.getElementById('pub-payment-term').value;
+  const method = document.getElementById('pub-payment-method').value;
+  const payStatus = document.getElementById('pub-payment-status').value;
+
+  if (!client || !dateISO) {
+    alert('Mohon isi Nama Pasangan/Wisudawan dan Tanggal Acara lengkap terlebih dahulu.');
     return;
   }
 
-  const allPackages = Array.isArray(appState.pricelist) ? appState.pricelist : [];
-  const pkg = allPackages.find(p => String(p.id) === String(pkgSelect ? pkgSelect.value : '')) || allPackages[0] || {
-    id: 'PKG-1', category: 'Wedding', name: 'WEDDING - SILVER 01', price: 1490000
-  };
+  const pkg = appState.pricelist.find(p => p.id === pkgId) || appState.pricelist[0];
+  const price = Number(pkg.price) || 0;
+  const nominal = term === 'Lunas 100%' ? price : Math.round(price * 0.3);
+  const paid = payStatus === 'Sudah Bayar' ? nominal : 0;
+  const invCode = 'INV-' + String(Date.now()).slice(-6);
 
-  const total = Number(pkg.price || 0);
-  const dpNominal = Math.round(total * 0.3);
-  const nominalPaid = paymentTerm === 'Lunas 100%' ? total : dpNominal;
-
-  const newBooking = normalizeBookingItem({
+  const newBk = sanitizeBooking({
     id: 'BK-' + Date.now(),
+    invoiceCode: invCode,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    client: clientName,
-    clientName: clientName,
-    phone: clientPhone,
-    day: day,
-    date: `${day} Okt 2026`,
-    category: pkg.category || 'Wedding',
+    client, phone, dateISO,
+    category: pkg.category,
     packageId: pkg.id,
-    package: pkg.name,
     packageName: pkg.name,
-    price: total,
-    transport: 0,
-    dp: paymentConfirm.includes('Sudah Bayar') ? nominalPaid : 0,
-    targetDp: dpNominal,
-    paymentMethod: paymentMethod,
-    paymentTerm: paymentTerm,
-    paymentStatus: paymentConfirm,
-    status: paymentConfirm.includes('Sudah Bayar') ? 'DP Masuk' : 'Booking Baru',
-    stage: 'Booking',
-    venue: venue,
-    location: venue,
-    driveLink: '',
-    selectedPhotos: [],
-    crew: [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
+    price, dp: paid,
+    paymentMethod: method,
+    paymentTerm: term,
+    venue,
+    proofImage: proofUploadBase64
   });
 
-  appState.bookingFilter = 'All';
-  if (!Array.isArray(appState.bookings)) appState.bookings = [];
-  appState.bookings.unshift(newBooking);
+  const btn = document.getElementById('btn-submit-public');
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan ke Server Admin...';
 
-  await window.saveState(false);
-  safeRenderAll();
+  appState.bookings.unshift(newBk);
+  await saveState(true);
+  renderAll();
 
-  const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
-  const waText =
-    `Halo Admin *FILEPHOTOKU.STD*, saya ingin konfirmasi Booking & Transaksi:\n\n` +
-    `• *Nama Klien:* ${clientName}\n` +
-    `• *No. WA:* ${clientPhone}\n` +
-    `• *Paket:* [${pkg.category || 'Wedding'}] ${pkg.name}\n` +
-    `• *Tanggal Acara:* Tanggal ${day}\n` +
+  const tglText = formatTanggalIndo(dateISO);
+  const waMsg =
+    `Halo Admin *FILEPHOTOKU.STD*, saya sudah mengisi Booking di Website:\n\n` +
+    `• *Kode Tiket:* #${invCode}\n` +
+    `• *Nama:* ${client}\n` +
+    `• *No. WA:* ${phone}\n` +
+    `• *Paket:* [${pkg.category}] ${pkg.name}\n` +
+    `• *Tanggal Acara:* ${tglText}\n` +
     `• *Lokasi:* ${venue}\n` +
-    `• *Total Paket:* ${formatRp(total)}\n` +
-    `• *Nominal Transaksi:* ${paymentTerm} (${formatRp(nominalPaid)})\n` +
-    `• *Metode Bayar:* *${paymentMethod}*\n` +
-    `• *Status:* ${paymentConfirm}\n\n` +
-    `Data booking saya sudah masuk ke sistem. Berikut saya lampirkan bukti pembayarannya.`;
+    `• *Harga Paket:* ${rp(price)}\n` +
+    `• *Pembayaran:* ${term} (${rp(nominal)}) via *${method}*\n` +
+    `• *Status:* ${payStatus}\n` +
+    `• *Bukti di Web:* ${proofUploadBase64 ? 'Sudah diupload ✅' : 'Menyusul via WA'}\n\n` +
+    `Mohon dicek di Dashboard Admin. Terima kasih!`;
 
-  window.location.href = `https://api.whatsapp.com/send?phone=6285708001457&text=${encodeURIComponent(waText)}`;
+  const waUrl = `https://api.whatsapp.com/send?phone=${appState.studioInfo.phone}&text=${encodeURIComponent(waMsg)}`;
+  const ticket = document.getElementById('pub-ticket-result');
+  ticket.classList.remove('hidden');
+  ticket.innerHTML = `
+    <div class="flex justify-between font-bold text-sage border-b border-sage/30 pb-1">
+      <span>✅ TERCATAT DI SERVER ADMIN</span>
+      <span class="font-mono">#${invCode}</span>
+    </div>
+    <div><strong>${client}</strong> — ${tglText} (${venue})</div>
+    <div>${pkg.name} • ${term} (${rp(nominal)}) via ${method}</div>
+    <a href="${waUrl}" target="_blank" class="block w-full text-center py-2.5 rounded-xl bg-sage text-white font-bold mt-2">
+      📲 Kirim Konfirmasi ke WhatsApp Admin →
+    </a>`;
+
+  btn.disabled = false;
+  btn.textContent = '✅ Tersimpan! Kirim Booking Baru →';
+  clearProofUpload();
+  window.open(waUrl, '_blank');
 };
 
-// 10. Tombol Sync Server & Pengaturan QRIS di Header Admin
-function injectAdminPaymentToolbar() {
-  const adminHeaderGroup = document.querySelector('header .admin-only-ui');
-  if (!adminHeaderGroup || document.getElementById('btn-sync-cloud-now')) return;
+// Simulasi Bundling
+function renderBundlingSection() {
+  const sel = document.getElementById('bundling-pkg-select');
+  const wrap = document.getElementById('bundling-addons-list');
+  if (!sel || !wrap) return;
+  const mainPkgs = appState.pricelist.filter(p => !p.category.toLowerCase().includes('add-on'));
+  const addons = appState.pricelist.filter(p => p.category.toLowerCase().includes('add-on'));
 
-  const syncBtn = document.createElement('button');
-  syncBtn.id = 'btn-sync-cloud-now';
-  syncBtn.className = 'px-2.5 py-1.5 rounded-xl bg-sageLight text-sage text-xs font-bold border border-sage/30';
-  syncBtn.innerHTML = '🔄 Sync Server';
-  syncBtn.onclick = () => {
-    appState.bookingFilter = 'All';
-    window.syncFromCloud(true);
-  };
-
-  const payCfgBtn = document.createElement('button');
-  payCfgBtn.id = 'btn-config-qris';
-  payCfgBtn.className = 'px-2.5 py-1.5 rounded-xl bg-amberLight text-espresso text-xs font-bold border border-amberWarn/30';
-  payCfgBtn.innerHTML = '💳 Atur QRIS & Rek';
-  payCfgBtn.onclick = () => {
-    ensurePaymentConfig();
-    const cfg = appState.paymentConfig;
-    const bankName = prompt('Nama Bank Studio (misal: BCA / BRI / Mandiri):', cfg.bankName);
-    if (bankName === null) return;
-    const accNum = prompt('Nomor Rekening Resmi Studio:', cfg.accountNumber);
-    if (accNum === null) return;
-    const accHolder = prompt('Atas Nama Rekening:', cfg.accountHolder);
-    if (accHolder === null) return;
-    const qrisUrl = prompt('Link Gambar QRIS Studio:', cfg.qrisImageUrl);
-    if (qrisUrl === null) return;
-
-    appState.paymentConfig = {
-      bankName: bankName.trim() || cfg.bankName,
-      accountNumber: accNum.trim() || cfg.accountNumber,
-      accountHolder: accHolder.trim() || cfg.accountHolder,
-      ewalletInfo: cfg.ewalletInfo,
-      qrisImageUrl: qrisUrl.trim() || cfg.qrisImageUrl
-    };
-    window.saveState(false);
-    updateClientPaymentPreview();
-    alert('Pengaturan QRIS & Rekening berhasil disimpan!');
-  };
-
-  adminHeaderGroup.prepend(payCfgBtn);
-  adminHeaderGroup.prepend(syncBtn);
+  if (!sel.options.length) {
+    sel.innerHTML = mainPkgs.map(p => `<option value="${p.id}">[${p.category}] ${p.name} — ${rp(p.price)}</option>`).join('');
+  }
+  if (!wrap.children.length) {
+    wrap.innerHTML = addons.map(a => `
+      <label class="flex items-center justify-between gap-2 p-2 rounded-xl bg-cream border border-[#E6D5C3] cursor-pointer">
+        <span class="flex items-center gap-1.5 min-w-0">
+          <input type="checkbox" class="bundling-cb accent-[#9E5231]" data-name="${a.name}" value="${a.price}" onchange="updateBundlingSim()" />
+          <span class="truncate">${a.name}</span>
+        </span>
+        <span class="font-mono font-bold text-espresso shrink-0">${rp(a.price)}</span>
+      </label>`).join('');
+  }
+  updateBundlingSim();
 }
 
-// 11. Inisialisasi Aman Saat Halaman Dibuka / Di-Refresh
-window.onload = function() {
-  sanitizeAllBookings();
-  ensurePaymentConfig();
-  safeRenderAll();
-  applyStudioAccessMode();
-  if (typeof switchSetupSubTab === 'function') switchSetupSubTab(appState.setupSubTab || 'pricelist');
-  if (typeof setBookingView === 'function') setBookingView(appState.bookingView || 'list');
+window.updateBundlingSim = function() {
+  const sel = document.getElementById('bundling-pkg-select');
+  const pkg = appState.pricelist.find(p => p.id === (sel && sel.value)) || { price: 0 };
+  let total = Number(pkg.price) || 0;
+  document.querySelectorAll('.bundling-cb:checked').forEach(cb => total += Number(cb.value) || 0);
+  const el = document.getElementById('bundling-total');
+  if (el) el.textContent = rp(total);
+};
 
-  // Bersihkan juga data yang sudah terlanjur ada di Firebase
-  window.syncFromCloud(false).then(() => {
-    window.saveState(false);
+window.copyBundlingSimulation = function() {
+  const sel = document.getElementById('bundling-pkg-select');
+  const pkg = appState.pricelist.find(p => p.id === sel.value);
+  const checked = Array.from(document.querySelectorAll('.bundling-cb:checked'));
+  let total = Number(pkg ? pkg.price : 0);
+  const lines = [
+    `*SIMULASI PAKET FILEPHOTOKU.STD*`,
+    `• Paket Utama: ${pkg ? pkg.name : '-'} (${rp(total)})`
+  ];
+  checked.forEach(cb => {
+    total += Number(cb.value) || 0;
+    lines.push(`• Add-On: ${cb.dataset.name} (${rp(cb.value)})`);
+  });
+  lines.push(`\n*Estimasi Total:* ${rp(total)}`);
+  lines.push(`*DP 30%:* ${rp(Math.round(total * 0.3))}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    showToast('Simulasi Disalin!', 'Rincian bundling siap ditempel ke WhatsApp.');
+  });
+};
+
+// ============================================================================
+// 2. DASHBOARD & KALENDER DINAMIS
+// ============================================================================
+function renderDashboard() {
+  let totalOmzet = 0, totalDp = 0, totalUnpaid = 0, totalFee = 0;
+  appState.bookings.forEach(b => {
+    totalOmzet += b.price;
+    totalDp += b.dp;
+    totalUnpaid += Math.max(0, b.price - b.dp);
+    totalFee += (b.crew || []).reduce((s, c) => s + (Number(c.fee) || 0), 0);
   });
 
-  setInterval(() => {
-    window.syncFromCloud(false);
-  }, 10000);
+  document.getElementById('dash-unpaid-hero').textContent = rp(totalUnpaid);
+  document.getElementById('dash-unpaid').textContent = rp(totalUnpaid);
+  document.getElementById('dash-dp').textContent = rp(totalDp);
+  document.getElementById('dash-omzet').textContent = rp(totalOmzet);
+  document.getElementById('dash-profit').textContent = rp(totalOmzet - totalFee);
+
+  // Pelacak Progres
+  const progEl = document.getElementById('dash-progress-list');
+  progEl.innerHTML = appState.bookings.length ? appState.bookings.slice(0, 8).map(b => `
+    <div class="p-3 rounded-2xl bg-cream border border-[#E6D5C3] flex items-center justify-between gap-2 text-xs">
+      <div class="min-w-0">
+        <div class="font-bold text-espresso truncate">${b.client} <span class="font-normal text-espressoMuted">• ${formatTanggalIndo(b.dateISO)}</span></div>
+        <div class="text-[11px] text-espressoMuted truncate">${b.packageName}</div>
+      </div>
+      <button type="button" onclick="advanceBookingStage('${b.id}')" class="px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] font-bold text-[11px] text-terracotta shrink-0">
+        ${b.stage} →
+      </button>
+    </div>
+  `).join('') : '<p class="text-xs text-espressoMuted">Belum ada jadwal booking.</p>';
+
+  renderDynamicCalendar();
+}
+
+window.advanceBookingStage = function(id) {
+  const bk = appState.bookings.find(b => b.id === id);
+  if (!bk) return;
+  const idx = STAGES.indexOf(bk.stage);
+  bk.stage = STAGES[(idx + 1) % STAGES.length];
+  bk.updatedAt = Date.now();
+  saveState(true);
+  renderDashboard();
+  showToast('Progres Diperbarui', `${bk.client} → ${bk.stage}`);
 };
+
+window.remindUnpaidWA = function() {
+  const unpaid = appState.bookings.filter(b => b.price > b.dp);
+  if (!unpaid.length) {
+    showToast('Semua Lunas!', 'Tidak ada klien dengan sisa pelunasan.');
+    return;
+  }
+  const bk = unpaid[0];
+  const sisa = bk.price - bk.dp;
+  const phone = (bk.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+  const msg = `Halo Kak *${bk.client}*,\n\nPengingat jadwal *${bk.packageName}* pada *${formatTanggalIndo(bk.dateISO)}* bersama *FILEPHOTOKU.STD*.\n• Total: ${rp(bk.price)}\n• DP Masuk: ${rp(bk.dp)}\n• Sisa Pelunasan: *${rp(sisa)}*\n\nPembayaran dapat melalui BSI ${appState.paymentConfig.accountNumber} a.n. ${appState.paymentConfig.accountHolder} atau QRIS. Terima kasih!`;
+  window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, '_blank');
 };
+
+function renderDynamicCalendar() {
+  document.getElementById('cal-month-label').textContent = `Kalender ${BULAN_ID[calMonth]} ${calYear}`;
+  const grid = document.getElementById('dash-calendar-grid');
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Min, 1=Sen
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const ymPrefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-`;
+
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<div></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = ymPrefix + String(d).padStart(2, '0');
+    const jobs = appState.bookings.filter(b => b.dateISO === iso);
+    const isToday = iso === todayISO();
+    const cls = jobs.length
+      ? 'bg-terracotta text-white font-extrabold shadow-sm'
+      : (isToday ? 'bg-sageLight text-sage font-bold border border-sage' : 'bg-cream text-espresso');
+    html += `<button type="button" onclick="selectCalDate('${iso}')" class="py-2 rounded-xl text-xs transition ${cls}">
+      ${d}${jobs.length ? `<div class="text-[9px] leading-none mt-0.5">${jobs.length} job</div>` : ''}
+    </button>`;
+  }
+  grid.innerHTML = html;
+
+  const monthJobs = appState.bookings.filter(b => b.dateISO.startsWith(ymPrefix));
+  document.getElementById('dash-calendar-detail').innerHTML = monthJobs.length
+    ? `<strong>${monthJobs.length} jadwal di ${BULAN_ID[calMonth]} ${calYear}:</strong> ` +
+      monthJobs.map(j => `${j.client} (${formatTanggalIndo(j.dateISO)})`).join(' • ')
+    : `Belum ada jadwal di ${BULAN_ID[calMonth]} ${calYear}. Klik tanggal atau tombol + Booking untuk menambah.`;
+}
+
+window.changeCalMonth = function(delta) {
+  if (delta === 0) {
+    const n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth();
+  } else {
+    calMonth += delta;
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+  }
+  renderDynamicCalendar();
+};
+
+window.selectCalDate = function(iso) {
+  const jobs = appState.bookings.filter(b => b.dateISO === iso);
+  const box = document.getElementById('dash-calendar-detail');
+  if (jobs.length) {
+    box.innerHTML = `<div class="font-bold text-espresso mb-1">Jadwal ${formatTanggalIndo(iso)}:</div>` +
+      jobs.map(j => `<div>• <strong>${j.client}</strong> — ${j.packageName} (${j.venue})</div>`).join('');
+  } else {
+    box.innerHTML = `Tanggal <strong>${formatTanggalIndo(iso)}</strong> masih kosong. <button type="button" onclick="openNewBookingModal('', '${iso}')" class="text-terracotta font-bold underline ml-1">+ Tambah Job di tanggal ini</button>`;
+  }
+};
+
+// ============================================================================
+// 3. BOOKING & MODAL TAMBAH/EDIT BOOKING
+// ============================================================================
+function renderBookings() {
+  const mainCats = ['All', ...appState.categories.filter(c => !c.toLowerCase().includes('add-on'))];
+  document.getElementById('booking-filter-pills').innerHTML = mainCats.map(c => {
+    const act = appState.bookingFilter === c;
+    return `<button type="button" onclick="setBookingFilter('${c}')" class="px-3 py-1.5 rounded-full text-xs font-bold border ${act ? 'bg-espresso text-white border-espresso' : 'bg-white text-espresso border-[#DEC9B5]'}">${c === 'All' ? 'Semua' : c}</button>`;
+  }).join('');
+
+  const list = appState.bookings.filter(b => {
+    const matchCat = appState.bookingFilter === 'All' || b.category === appState.bookingFilter;
+    const kw = searchKeyword;
+    const matchKw = !kw || [b.client, b.packageName, b.venue, b.category, b.date].join(' ').toLowerCase().includes(kw);
+    return matchCat && matchKw;
+  });
+
+  const wrap = document.getElementById('booking-list-container');
+  if (!list.length) {
+    wrap.innerHTML = '<div class="bg-white rounded-3xl p-6 text-center text-xs text-espressoMuted border border-[#E6D5C3]">Tidak ada data booking yang cocok. Klik <b>+ Job Baru</b> untuk menambah.</div>';
+    return;
+  }
+
+  wrap.innerHTML = list.map(b => {
+    const sisa = Math.max(0, b.price - b.dp);
+    const lunas = sisa === 0 && b.price > 0;
+    return `
+    <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] shadow-sm space-y-3 text-xs">
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="px-2 py-0.5 rounded-md bg-beige text-espresso text-[10px] font-bold">${b.category}</span>
+            <span class="px-2 py-0.5 rounded-md ${lunas ? 'bg-sageLight text-sage' : 'bg-amberLight text-amberWarn'} text-[10px] font-bold">${b.status}</span>
+            <span class="text-[11px] font-mono font-bold text-terracotta">📅 ${formatTanggalIndo(b.dateISO)}</span>
+          </div>
+          <h3 class="font-editorial text-lg font-bold text-espresso mt-1">${b.client}</h3>
+          <p class="text-espressoMuted">${b.packageName} • 📍 ${b.venue} • 📞 ${b.phone}</p>
+        </div>
+        <div class="text-left sm:text-right font-mono">
+          <div class="font-extrabold text-sm text-espresso">${rp(b.price)}</div>
+          <div class="text-[11px] text-sage">DP: ${rp(b.dp)}</div>
+          <div class="text-[11px] ${sisa > 0 ? 'text-danger font-bold' : 'text-sage'}">Sisa: ${rp(sisa)}</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input type="url" value="${b.driveLink || ''}" onchange="updateBookingDrive('${b.id}', this.value)" placeholder="Tempel Link Google Drive klien di sini..." class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+        ${b.driveLink ? `<a href="${b.driveLink}" target="_blank" class="px-3 py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-center shrink-0">Buka Drive ↗</a>` : ''}
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#EFE2D3]">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="px-2.5 py-1 rounded-lg bg-[#FAF3EB] border border-[#DEC9B5] text-[11px] font-bold">💳 ${b.paymentMethod} (${b.paymentTerm})</span>
+          ${b.proofImage ? `<button type="button" onclick="openProofModal('${b.id}')" class="px-2.5 py-1 rounded-lg bg-sage text-white text-[11px] font-bold">👁️ Lihat Bukti Bayar</button>` : ''}
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="toggleBookingPaid('${b.id}')" class="px-2.5 py-1.5 rounded-lg bg-sageLight text-sage font-bold">${lunas ? '↩ Batal Lunas' : '✓ Tandai Lunas'}</button>
+          <button type="button" onclick="openBookingInTab('${b.id}','invoice')" class="px-2.5 py-1.5 rounded-lg bg-beige text-espresso font-bold">Invoice</button>
+          <button type="button" onclick="openBookingInTab('${b.id}','crew')" class="px-2.5 py-1.5 rounded-lg bg-beige text-espresso font-bold">Kru</button>
+          <button type="button" onclick="openNewBookingModal('${b.id}')" class="px-2.5 py-1.5 rounded-lg bg-cream border border-[#DEC9B5] font-bold">Edit</button>
+          <button type="button" onclick="deleteBooking('${b.id}')" class="px-2.5 py-1.5 rounded-lg bg-dangerLight text-danger font-bold">Hapus</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.setBookingFilter = function(cat) { appState.bookingFilter = cat; renderBookings(); };
+window.setBookingView = function(v) {
+  if (v === 'calendar') { switchTab('dashboard'); return; }
+  appState.bookingView = v; renderBookings();
+};
+
+window.openNewBookingModal = function(editId = '', presetDate = '') {
+  const modal = document.getElementById('modal-booking');
+  const mainCats = appState.categories.filter(c => !c.toLowerCase().includes('add-on'));
+  const catSel = document.getElementById('bk-category');
+  catSel.innerHTML = mainCats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const existing = editId ? appState.bookings.find(b => b.id === editId) : null;
+  document.getElementById('modal-booking-title').textContent = existing ? 'Edit Booking Klien' : 'Tambah Booking Klien';
+  document.getElementById('bk-edit-id').value = existing ? existing.id : '';
+  document.getElementById('bk-client').value = existing ? existing.client : '';
+  document.getElementById('bk-date').value = existing ? existing.dateISO : (presetDate || todayISO());
+  catSel.value = existing ? existing.category : (mainCats[0] || 'Wedding');
+  onModalCategoryChange(existing ? existing.packageId : '');
+
+  document.getElementById('bk-venue').value = existing ? existing.venue : '';
+  document.getElementById('bk-phone').value = existing ? existing.phone : '';
+  document.getElementById('bk-drive').value = existing ? existing.driveLink : '';
+  if (existing) {
+    document.getElementById('bk-price').value = existing.price;
+    document.getElementById('bk-dp').value = existing.dp;
+  }
+  modal.classList.remove('hidden');
+};
+
+window.closeBookingModal = function() {
+  document.getElementById('modal-booking').classList.add('hidden');
+};
+
+window.onModalCategoryChange = function(selectedPkgId = '') {
+  const cat = document.getElementById('bk-category').value;
+  const pkgs = appState.pricelist.filter(p => p.category === cat);
+  const pkgSel = document.getElementById('bk-package');
+  pkgSel.innerHTML = pkgs.map(p => `<option value="${p.id}">${p.name} — ${rp(p.price)}</option>`).join('');
+  if (selectedPkgId) pkgSel.value = selectedPkgId;
+  onModalPackageChange();
+};
+
+window.onModalPackageChange = function() {
+  const pkgId = document.getElementById('bk-package').value;
+  const pkg = appState.pricelist.find(p => p.id === pkgId);
+  if (pkg) {
+    document.getElementById('bk-price').value = pkg.price;
+    document.getElementById('bk-dp').value = Math.round(pkg.price * 0.3);
+  }
+};
+
+window.saveAdminBooking = async function() {
+  const editId = document.getElementById('bk-edit-id').value;
+  const client = (document.getElementById('bk-client').value || '').trim();
+  const dateISO = document.getElementById('bk-date').value;
+  const category = document.getElementById('bk-category').value;
+  const pkgId = document.getElementById('bk-package').value;
+  const pkg = appState.pricelist.find(p => p.id === pkgId) || { id: pkgId, name: category, price: 0 };
+  const venue = (document.getElementById('bk-venue').value || '').trim() || 'Banyuwangi';
+  const phone = (document.getElementById('bk-phone').value || '').trim() || '-';
+  const driveLink = (document.getElementById('bk-drive').value || '').trim();
+  const price = Number(document.getElementById('bk-price').value) || Number(pkg.price) || 0;
+  const dp = Number(document.getElementById('bk-dp').value) || 0;
+
+  if (!client || !dateISO) {
+    alert('Nama Klien dan Tanggal Lengkap wajib diisi!');
+    return;
+  }
+
+  if (editId) {
+    const idx = appState.bookings.findIndex(b => b.id === editId);
+    if (idx !== -1) {
+      appState.bookings[idx] = sanitizeBooking(Object.assign({}, appState.bookings[idx], {
+        client, dateISO, category, packageId: pkg.id, packageName: pkg.name,
+        venue, phone, driveLink, price, dp, updatedAt: Date.now()
+      }));
+    }
+  } else {
+    appState.bookings.unshift(sanitizeBooking({
+      id: 'BK-' + Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      client, dateISO, category, packageId: pkg.id, packageName: pkg.name,
+      venue, phone, driveLink, price, dp
+    }));
+  }
+
+  appState.bookingFilter = 'All';
+  closeBookingModal();
+  await saveState(true);
+  switchTab('booking');
+  showToast('Booking Tersimpan!', `${client} (${formatTanggalIndo(dateISO)}) berhasil masuk daftar.`);
+};
+
+window.updateBookingDrive = function(id, url) {
+  const bk = appState.bookings.find(b => b.id === id);
+  if (!bk) return;
+  bk.driveLink = url.trim(); bk.updatedAt = Date.now();
+  saveState(true); renderBookings();
+  showToast('Link Drive Disimpan', bk.client);
+};
+
+window.toggleBookingPaid = function(id) {
+  const bk = appState.bookings.find(b => b.id === id);
+  if (!bk) return;
+  bk.dp = bk.dp >= bk.price ? Math.round(bk.price * 0.3) : bk.price;
+  bk.status = bk.dp >= bk.price ? 'Lunas' : 'DP Masuk';
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+};
+
+window.deleteBooking = function(id) {
+  if (!confirm('Hapus data booking ini secara permanen?')) return;
+  appState.deletedBookingIds = [...new Set([...(appState.deletedBookingIds || []), id])];
+  appState.bookings = appState.bookings.filter(b => b.id !== id);
+  saveState(true); renderAll();
+  showToast('Terhapus', 'Data booking berhasil dihapus.');
+};
+
+window.openBookingInTab = function(id, tab) {
+  if (tab === 'invoice') appState.selectedInvoiceBookingId = id;
+  if (tab === 'crew') appState.selectedCrewBookingId = id;
+  switchTab(tab);
+};
+
+window.openProofModal = function(id) {
+  const bk = appState.bookings.find(b => b.id === id);
+  if (!bk || !bk.proofImage) return;
+  document.getElementById('proof-modal-title').textContent = `Bukti Bayar — ${bk.client}`;
+  document.getElementById('proof-modal-sub').textContent = `${bk.packageName} • ${bk.paymentMethod} (${bk.paymentTerm})`;
+  document.getElementById('proof-modal-img').src = bk.proofImage;
+  document.getElementById('modal-proof').classList.remove('hidden');
+};
+
+window.closeProofModal = function() {
+  document.getElementById('modal-proof').classList.add('hidden');
+};
+
+// ============================================================================
+// 4. GENERATOR INVOICE RESMI
+// ============================================================================
+function getActiveInvoiceBooking() {
+  if (!appState.bookings.length) return null;
+  let bk = appState.bookings.find(b => b.id === appState.selectedInvoiceBookingId);
+  if (!bk) { bk = appState.bookings[0]; appState.selectedInvoiceBookingId = bk.id; }
+  return bk;
+}
+
+function renderInvoice() {
+  const bkSel = document.getElementById('inv-booking-select');
+  const pkgSel = document.getElementById('inv-pkg-select');
+  if (!bkSel || !pkgSel) return;
+
+  bkSel.innerHTML = appState.bookings.map(b =>
+    `<option value="${b.id}">${b.client} — ${formatTanggalIndo(b.dateISO)} (${b.packageName})</option>`
+  ).join('');
+  pkgSel.innerHTML = appState.pricelist.map(p =>
+    `<option value="${p.id}">[${p.category}] ${p.name} — ${rp(p.price)}</option>`
+  ).join('');
+
+  const bk = getActiveInvoiceBooking();
+  if (!bk) return;
+  bkSel.value = bk.id;
+
+  const total = bk.invoiceItems.reduce((s, it) => s + (Number(it.price) || 0), 0);
+  bk.price = total;
+  const sisa = Math.max(0, total - bk.dp);
+
+  document.getElementById('inv-dp-input').value = bk.dp;
+  document.getElementById('inv-preview-no').textContent = '#' + bk.invoiceCode;
+  document.getElementById('inv-preview-client').textContent = `${bk.client} (${bk.phone})`;
+  document.getElementById('inv-preview-date').textContent = formatTanggalIndo(bk.dateISO);
+  document.getElementById('inv-preview-meta').textContent = `${bk.venue} • ${bk.category}`;
+
+  document.getElementById('inv-preview-items').innerHTML = bk.invoiceItems.map((it, idx) => `
+    <div class="flex items-center justify-between gap-2 py-2 border-b border-[#EFE2D3]">
+      <span class="font-semibold text-espresso">${it.name}</span>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="font-mono font-bold">${rp(it.price)}</span>
+        <button type="button" onclick="removeInvoiceItem(${idx})" class="text-danger font-bold print:hidden">✕</button>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('inv-preview-total').textContent = rp(total);
+  document.getElementById('inv-preview-dp').textContent = rp(bk.dp);
+  document.getElementById('inv-preview-sisa').textContent = rp(sisa);
+  const cfg = appState.paymentConfig;
+  document.getElementById('inv-preview-bank').innerHTML =
+    `<strong>Rekening Resmi:</strong> ${cfg.bank} — <span class="font-mono font-bold">${cfg.accountNumber}</span> a.n. <strong>${cfg.accountHolder}</strong> | QRIS: ${cfg.merchantQris}`;
+}
+
+window.selectInvoiceBooking = function() {
+  appState.selectedInvoiceBookingId = document.getElementById('inv-booking-select').value;
+  renderInvoice();
+};
+
+window.addInvoicePackageItem = function() {
+  const bk = getActiveInvoiceBooking();
+  const pkg = appState.pricelist.find(p => p.id === document.getElementById('inv-pkg-select').value);
+  if (!bk || !pkg) return;
+  bk.invoiceItems.push({ name: pkg.name, price: pkg.price });
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+};
+
+window.addInvoiceCustomItem = function() {
+  const bk = getActiveInvoiceBooking();
+  const name = (document.getElementById('inv-custom-name').value || '').trim();
+  const price = Number(document.getElementById('inv-custom-price').value) || 0;
+  if (!bk || !name) return;
+  bk.invoiceItems.push({ name, price });
+  document.getElementById('inv-custom-name').value = '';
+  document.getElementById('inv-custom-price').value = '';
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+};
+
+window.removeInvoiceItem = function(idx) {
+  const bk = getActiveInvoiceBooking();
+  if (!bk || bk.invoiceItems.length <= 1) return;
+  bk.invoiceItems.splice(idx, 1);
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+};
+
+window.updateInvoiceDp = function(val) {
+  const bk = getActiveInvoiceBooking();
+  if (!bk) return;
+  bk.dp = Number(val) || 0;
+  bk.status = bk.dp >= bk.price ? 'Lunas' : (bk.dp > 0 ? 'DP Masuk' : 'Booking Baru');
+  bk.updatedAt = Date.now();
+  saveState(true); renderDashboard(); renderInvoice();
+};
+
+window.setInvoiceDpPercent = function(pct) {
+  const bk = getActiveInvoiceBooking();
+  if (!bk) return;
+  const total = bk.invoiceItems.reduce((s, it) => s + (Number(it.price) || 0), 0);
+  updateInvoiceDp(Math.round(total * pct / 100));
+};
+
+window.sendInvoiceWA = function() {
+  const bk = getActiveInvoiceBooking();
+  if (!bk) return;
+  const total = bk.invoiceItems.reduce((s, it) => s + (Number(it.price) || 0), 0);
+  const sisa = Math.max(0, total - bk.dp);
+  const cfg = appState.paymentConfig;
+  const itemsTxt = bk.invoiceItems.map(i => `• ${i.name}: ${rp(i.price)}`).join('\n');
+  const msg =
+    `*INVOICE RESMI FILEPHOTOKU.STD (#${bk.invoiceCode})*\n\n` +
+    `Klien: *${bk.client}*\n` +
+    `Tanggal: *${formatTanggalIndo(bk.dateISO)}*\n` +
+    `Lokasi: ${bk.venue}\n\n` +
+    `*Rincian Layanan:*\n${itemsTxt}\n\n` +
+    `• Total Tagihan: *${rp(total)}*\n` +
+    `• DP Masuk: ${rp(bk.dp)}\n` +
+    `• *Sisa Pelunasan: ${rp(sisa)}*\n` +
+    (bk.driveLink ? `• Link Google Drive: ${bk.driveLink}\n` : '') +
+    `\nPembayaran: *${cfg.bank} ${cfg.accountNumber}* a.n. ${cfg.accountHolder} / QRIS ${cfg.merchantQris}.\nTerima kasih!`;
+  const phone = (bk.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+  window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+// ============================================================================
+// 5. KRU, FEE & SHARELOC OTOMATIS
+// ============================================================================
+function getActiveCrewBooking() {
+  if (!appState.bookings.length) return null;
+  let bk = appState.bookings.find(b => b.id === appState.selectedCrewBookingId);
+  if (!bk) { bk = appState.bookings[0]; appState.selectedCrewBookingId = bk.id; }
+  return bk;
+}
+
+function renderCrew() {
+  const sel = document.getElementById('crew-booking-select');
+  if (!sel) return;
+  sel.innerHTML = appState.bookings.map(b =>
+    `<option value="${b.id}">${b.client} — ${formatTanggalIndo(b.dateISO)} (${b.venue})</option>`
+  ).join('');
+  const bk = getActiveCrewBooking();
+  if (!bk) return;
+  sel.value = bk.id;
+
+  const listEl = document.getElementById('crew-assigned-list');
+  listEl.innerHTML = bk.crew.map((c, idx) => `
+    <div class="p-3 rounded-2xl bg-cream border border-[#DEC9B5] space-y-2 text-xs">
+      <div class="flex items-center justify-between">
+        <strong class="text-espresso">${c.role}</strong>
+        <button type="button" onclick="removeCrewRow(${idx})" class="text-danger font-bold px-2">✕</button>
+      </div>
+      <select onchange="updateCrewRow(${idx},'name',this.value)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5]">
+        ${appState.crewList.map(m => `<option value="${m.name}" ${m.name === c.name ? 'selected' : ''}>${m.name} (${m.role})</option>`).join('')}
+      </select>
+      <div class="flex items-center gap-2">
+        <span class="text-espressoMuted shrink-0">Fee Kru (Rp):</span>
+        <input type="number" value="${c.fee}" oninput="updateCrewRow(${idx},'fee',this.value)" class="flex-1 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-right font-bold" />
+      </div>
+    </div>`).join('');
+
+  const totalFee = bk.crew.reduce((s, c) => s + (Number(c.fee) || 0), 0);
+  document.getElementById('crew-total-fee').textContent = rp(totalFee);
+  document.getElementById('crew-net-profit').textContent = rp(bk.price - totalFee);
+
+  document.getElementById('brief-venue').value = bk.venue || '';
+  document.getElementById('brief-maps').value = bk.mapsLink || '';
+  document.getElementById('brief-time').value = bk.standbyTime || '07:00 WIB';
+  document.getElementById('brief-card').value = bk.memoryCard || 'Memory Card #A1';
+  renderBriefingPreview(bk);
+}
+
+function renderBriefingPreview(bk) {
+  const timTxt = bk.crew.map(c => `- ${c.role}: ${c.name}`).join('\n');
+  const txt =
+    `*BRIEFING & SHARELOC TIM FILEPHOTOKU.STD*\n\n` +
+    `📅 Tanggal: *${formatTanggalIndo(bk.dateISO)}*\n` +
+    `👤 Klien: *${bk.client}* (${bk.packageName})\n` +
+    `⏰ Standby: *${bk.standbyTime || '07:00 WIB'}*\n` +
+    `📍 Lokasi: ${bk.venue}\n` +
+    `🗺️ Maps: ${bk.mapsLink || '(Belum diisi)'}\n` +
+    `💾 Memory Card: ${bk.memoryCard || '-'}\n\n` +
+    `*Tim Bertugas:*\n${timTxt}\n\nMohon hadir 15 menit lebih awal & cek baterai/memory. Semangat tim!`;
+  document.getElementById('brief-preview').textContent = txt;
+}
+
+window.addCrewRow = function() {
+  const bk = getActiveCrewBooking();
+  if (!bk) return;
+  const role = (document.getElementById('crew-new-role').value || '').trim() || 'Second Shooter';
+  const def = appState.crewList.find(m => m.role.toLowerCase().includes(role.toLowerCase())) || appState.crewList[0];
+  bk.crew.push({ role, name: def.name, fee: def.defaultFee || 0 });
+  document.getElementById('crew-new-role').value = '';
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+};
+
+window.updateCrewRow = function(idx, field, val) {
+  const bk = getActiveCrewBooking();
+  if (!bk || !bk.crew[idx]) return;
+  bk.crew[idx][field] = field === 'fee' ? (Number(val) || 0) : val;
+  bk.updatedAt = Date.now();
+  saveState(true); renderCrew(); renderDashboard();
+};
+
+window.removeCrewRow = function(idx) {
+  const bk = getActiveCrewBooking();
+  if (!bk) return;
+  bk.crew.splice(idx, 1);
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+};
+
+window.updateBriefingField = function(field, val) {
+  const bk = getActiveCrewBooking();
+  if (!bk) return;
+  bk[field] = val; bk.updatedAt = Date.now();
+  saveState(true); renderBriefingPreview(bk);
+};
+
+window.sendCrewBriefingWA = function() {
+  const txt = document.getElementById('brief-preview').textContent;
+  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`, '_blank');
+};
+
+// ============================================================================
+// 6. SORTIR FOTO (LIGHTROOM)
+// ============================================================================
+function getActiveSortBooking() {
+  if (!appState.bookings.length) return null;
+  let bk = appState.bookings.find(b => b.id === appState.selectedSortBookingId);
+  if (!bk) { bk = appState.bookings[0]; appState.selectedSortBookingId = bk.id; }
+  return bk;
+}
+
+function renderPhotoSort() {
+  const sel = document.getElementById('sort-booking-select');
+  if (!sel) return;
+  sel.innerHTML = appState.bookings.map(b =>
+    `<option value="${b.id}">${b.client} — ${formatTanggalIndo(b.dateISO)}</option>`
+  ).join('');
+  const bk = getActiveSortBooking();
+  if (!bk) return;
+  sel.value = bk.id;
+  document.getElementById('sort-drive-input').value = bk.driveLink || '';
+  document.getElementById('sort-codes-input').value = (bk.selectedPhotos || []).join(', ');
+  document.getElementById('sort-preview-chips').innerHTML = (bk.selectedPhotos || []).map(c =>
+    `<span class="px-2.5 py-1 rounded-lg bg-beige font-mono text-[11px] font-bold text-espresso">${c}</span>`
+  ).join('');
+}
+
+window.saveSortDriveLink = function() {
+  const bk = getActiveSortBooking();
+  if (!bk) return;
+  bk.driveLink = document.getElementById('sort-drive-input').value.trim();
+  bk.updatedAt = Date.now();
+  saveState(true); renderAll();
+  showToast('Link Drive Disimpan', bk.client);
+};
+
+window.saveSortCodes = function() {
+  const bk = getActiveSortBooking();
+  if (!bk) return;
+  const raw = document.getElementById('sort-codes-input').value;
+  bk.selectedPhotos = raw.split(/[,\n\s]+/).map(s => s.trim()).filter(Boolean);
+  bk.updatedAt = Date.now();
+  saveState(true); renderPhotoSort();
+  showToast('Kode Foto Disimpan', `${bk.selectedPhotos.length} file dipilih.`);
+};
+
+window.copyLightroomCodes = function() {
+  const bk = getActiveSortBooking();
+  if (!bk || !bk.selectedPhotos.length) { alert('Belum ada kode foto!'); return; }
+  const clean = bk.selectedPhotos.join(', ');
+  navigator.clipboard.writeText(clean).then(() => {
+    showToast('Kode Lightroom Disalin!', clean);
+  });
+};
+
+window.sendDriveToClientWA = function() {
+  const bk = getActiveSortBooking();
+  if (!bk) return;
+  const msg = `Halo Kak *${bk.client}*,\nBerikut link Google Drive foto preview *${bk.packageName}* dari *FILEPHOTOKU.STD*:\n${bk.driveLink || '(Link menyusul)'}\n\nSilakan kirimkan nomor/kode file foto yang ingin diedit ya Kak. Terima kasih!`;
+  const phone = (bk.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+  window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+// ============================================================================
+// 7. ATUR PL / MASTER DATA
+// ============================================================================
+window.setSetupSubTab = function(sub) {
+  appState.setupSubTab = sub;
+  document.querySelectorAll('.setup-sub-btn').forEach(b => {
+    const act = b.dataset.sub === sub;
+    b.classList.toggle('bg-espresso', act);
+    b.classList.toggle('text-white', act);
+    b.classList.toggle('bg-beige', !act);
+    b.classList.toggle('text-espresso', !act);
+  });
+  renderSetup();
+};
+
+function renderSetup() {
+  const wrap = document.getElementById('setup-content');
+  if (!wrap) return;
+  const sub = appState.setupSubTab || 'pricelist';
+
+  if (sub === 'pricelist') {
+    wrap.innerHTML = `
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+        <h2 class="font-editorial text-lg font-bold">Kategori Layanan</h2>
+        <div class="flex gap-2">
+          <input id="new-cat-name" type="text" placeholder="Kategori baru..." class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+          <button type="button" onclick="addCategory()" class="px-4 py-2 rounded-xl bg-terracotta text-white font-bold">＋ Jasa</button>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          ${appState.categories.map(c => `<span class="px-3 py-1 rounded-full bg-cream border border-[#DEC9B5] font-semibold flex items-center gap-1.5">${c} <button type="button" onclick="deleteCategory('${c}')" class="text-danger">✕</button></span>`).join('')}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+        <div class="flex items-center justify-between">
+          <h2 class="font-editorial text-lg font-bold">Daftar Paket Pricelist</h2>
+          <span class="px-2.5 py-1 rounded-full bg-sageLight text-sage font-bold">${appState.pricelist.length} Paket Aktif</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2">
+          <select id="new-pl-cat" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-semibold">
+            ${appState.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+          </select>
+          <input id="new-pl-name" type="text" placeholder="Nama Paket" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5]" />
+          <input id="new-pl-price" type="number" placeholder="Harga (Rp)" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono" />
+          <input id="new-pl-desc" type="text" placeholder="Rincian paket..." class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5]" />
+          <button type="button" onclick="addPricelistItem()" class="w-full py-2.5 rounded-xl bg-espresso text-white font-bold">Simpan Paket Baru</button>
+        </div>
+        <div class="space-y-2">
+          ${appState.pricelist.map(p => `
+            <div class="p-3 rounded-2xl bg-cream border border-[#E6D5C3] space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[10px] font-bold uppercase text-terracotta">${p.category}</span>
+                <button type="button" onclick="deletePricelistItem('${p.id}')" class="text-danger font-bold">🗑️</button>
+              </div>
+              <input value="${p.name}" onchange="updatePricelistField('${p.id}','name',this.value)" class="w-full px-3 py-1.5 rounded-lg bg-white border border-[#DEC9B5] font-bold" />
+              <input type="number" value="${p.price}" onchange="updatePricelistField('${p.id}','price',this.value)" class="w-full px-3 py-1.5 rounded-lg bg-white border border-[#DEC9B5] font-mono" />
+              <input value="${p.desc || ''}" onchange="updatePricelistField('${p.id}','desc',this.value)" class="w-full px-3 py-1.5 rounded-lg bg-white border border-[#DEC9B5]" />
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } else if (sub === 'crew') {
+    wrap.innerHTML = `
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+        <h2 class="font-editorial text-lg font-bold">Master Kru & Fee Standar</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input id="mc-name" placeholder="Nama Kru" class="px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+          <input id="mc-role" placeholder="Posisi (Second Shooter)" class="px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+          <input id="mc-fee" type="number" placeholder="Fee Default (Rp)" class="px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono" />
+        </div>
+        <button type="button" onclick="addMasterCrew()" class="w-full py-2.5 rounded-xl bg-terracotta text-white font-bold">＋ Tambah Kru</button>
+        <div class="space-y-2">
+          ${appState.crewList.map(c => `
+            <div class="flex items-center justify-between p-3 rounded-xl bg-cream border border-[#E6D5C3]">
+              <div><strong>${c.name}</strong> <span class="text-espressoMuted">(${c.role})</span> • <span class="font-mono font-bold text-terracotta">${rp(c.defaultFee)}</span></div>
+              <button type="button" onclick="deleteMasterCrew('${c.id}')" class="text-danger font-bold">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } else if (sub === 'gear') {
+    wrap.innerHTML = `
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+        <h2 class="font-editorial text-lg font-bold">Inventaris Kamera, Lensa & Memory Card</h2>
+        <div class="flex gap-2">
+          <input id="mg-name" placeholder="Nama Gear / Memory Card..." class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+          <button type="button" onclick="addMasterGear()" class="px-4 py-2 rounded-xl bg-terracotta text-white font-bold">＋ Tambah</button>
+        </div>
+        <div class="space-y-2">
+          ${appState.gearList.map(g => `
+            <div class="flex items-center justify-between p-3 rounded-xl bg-cream border border-[#E6D5C3]">
+              <strong>${g.name}</strong>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleGearStatus('${g.id}')" class="px-2.5 py-1 rounded-lg bg-sageLight text-sage font-bold">${g.status}</button>
+                <button type="button" onclick="deleteMasterGear('${g.id}')" class="text-danger font-bold">✕</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } else {
+    const p = appState.paymentConfig;
+    const s = appState.studioInfo;
+    wrap.innerHTML = `
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+        <h2 class="font-editorial text-lg font-bold">Profil Studio, Rekening & PIN Admin</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div><label class="font-bold block mb-1">No. WA Admin (628...)</label><input id="pf-wa" value="${s.phone}" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" /></div>
+          <div><label class="font-bold block mb-1">PIN Login Admin</label><input id="pf-pin" value="${appState.adminPin}" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" /></div>
+          <div><label class="font-bold block mb-1">Nama Bank</label><input id="pf-bank" value="${p.bank}" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" /></div>
+          <div><label class="font-bold block mb-1">Nomor Rekening</label><input id="pf-norek" value="${p.accountNumber}" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono" /></div>
+          <div><label class="font-bold block mb-1">Atas Nama Rekening</label><input id="pf-an" value="${p.accountHolder}" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" /></div>
+          <div><label class="font-bold block mb-1">Nama Merchant QRIS</label><input id="pf-qris" value="${p.merchantQris}" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" /></div>
+        </div>
+        <button type="button" onclick="saveStudioProfile()" class="w-full py-3 rounded-xl bg-sage text-white font-bold">Simpan Profil & Bank</button>
+        <button type="button" onclick="resetAllData()" class="w-full py-2.5 rounded-xl bg-dangerLight text-danger font-bold">⚠️ Reset ke Data Awal Bersih</button>
+      </div>`;
+  }
+}
+
+window.addCategory = function() {
+  const val = (document.getElementById('new-cat-name').value || '').trim();
+  if (!val || appState.categories.includes(val)) return;
+  appState.categories.push(val); saveState(true); renderAll();
+};
+window.deleteCategory = function(cat) {
+  appState.categories = appState.categories.filter(c => c !== cat); saveState(true); renderAll();
+};
+window.addPricelistItem = function() {
+  const category = document.getElementById('new-pl-cat').value;
+  const name = (document.getElementById('new-pl-name').value || '').trim();
+  const price = Number(document.getElementById('new-pl-price').value) || 0;
+  const desc = (document.getElementById('new-pl-desc').value || '').trim();
+  if (!name) return;
+  appState.pricelist.push({ id: 'PL-' + Date.now(), category, name, price, desc });
+  saveState(true); renderAll(); showToast('Paket Ditambahkan', name);
+};
+window.updatePricelistField = function(id, field, val) {
+  const p = appState.pricelist.find(x => x.id === id);
+  if (!p) return;
+  p[field] = field === 'price' ? (Number(val) || 0) : val;
+  saveState(true); renderPublicWebsite();
+};
+window.deletePricelistItem = function(id) {
+  if (!confirm('Hapus paket ini?')) return;
+  appState.pricelist = appState.pricelist.filter(x => x.id !== id);
+  saveState(true); renderAll();
+};
+window.addMasterCrew = function() {
+  const name = document.getElementById('mc-name').value.trim();
+  const role = document.getElementById('mc-role').value.trim() || 'Kru';
+  const defaultFee = Number(document.getElementById('mc-fee').value) || 0;
+  if (!name) return;
+  appState.crewList.push({ id: 'C-' + Date.now(), name, role, defaultFee });
+  saveState(true); renderAll();
+};
+window.deleteMasterCrew = function(id) {
+  appState.crewList = appState.crewList.filter(c => c.id !== id); saveState(true); renderAll();
+};
+window.addMasterGear = function() {
+  const name = document.getElementById('mg-name').value.trim();
+  if (!name) return;
+  appState.gearList.push({ id: 'GR-' + Date.now(), name, status: 'Tersedia' });
+  saveState(true); renderAll();
+};
+window.toggleGearStatus = function(id) {
+  const g = appState.gearList.find(x => x.id === id);
+  if (!g) return;
+  const seq = ['Tersedia', 'Dipakai', 'Standby'];
+  g.status = seq[(seq.indexOf(g.status) + 1) % seq.length];
+  saveState(true); renderSetup();
+};
+window.deleteMasterGear = function(id) {
+  appState.gearList = appState.gearList.filter(g => g.id !== id); saveState(true); renderSetup();
+};
+window.saveStudioProfile = function() {
+  appState.studioInfo.phone = document.getElementById('pf-wa').value.trim() || '6285708001457';
+  appState.adminPin = document.getElementById('pf-pin').value.trim() || '2026';
+  appState.paymentConfig.bank = document.getElementById('pf-bank').value.trim();
+  appState.paymentConfig.accountNumber = document.getElementById('pf-norek').value.trim();
+  appState.paymentConfig.accountHolder = document.getElementById('pf-an').value.trim();
+  appState.paymentConfig.merchantQris = document.getElementById('pf-qris').value.trim();
+  saveState(true); renderAll(); showToast('Tersimpan!', 'Profil studio & bank diperbarui.');
+};
+window.resetAllData = async function() {
+  if (!confirm('Reset semua data ke pengaturan awal bersih?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  appState = sanitizeState(null);
+  appState.isUnlocked = true;
+  appState.activeTab = 'dashboard';
+  await saveState(true);
+  renderAll();
+  showToast('Data Direset', 'Database lokal & server sudah bersih.');
+};
+window.exportBackupJSON = function() {
+  const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `backup-filephotoku-${todayISO()}.json`;
+  a.click();
+};
+window.importBackupJSON = function(inp) {
+  const f = inp.files && inp.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      appState = sanitizeState(JSON.parse(e.target.result));
+      appState.isUnlocked = true;
+      saveState(true); renderAll();
+      showToast('Import Berhasil!', 'Data backup berhasil dipulihkan.');
+    } catch (err) { alert('File JSON tidak valid.'); }
+  };
+  r.readAsText(f);
+};
+
+// --- INISIALISASI SAAT HALAMAN DIBUKA ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadLocalState();
+  // Saat pertama dibuka selalu masuk Mode Klien (aman untuk konsumen)
+  appState.isUnlocked = false;
+  appState.activeTab = 'website';
+  document.body.classList.add('public-client-mode');
+  renderAll();
+  syncFromCloud(false);
+  setInterval(() => syncFromCloud(false), 12000);
+});

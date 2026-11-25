@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>FILEPHOTOKU.STD — Capture Your Story</title>
-
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="FILEPHOTOKU.STD" />
   <meta name="theme-color" content="#06131A" />
 
@@ -26,31 +24,59 @@
             terracotta: '#9E5231', terracottaDark: '#7C3D21', fpOrange: '#FF6B00',
             sage: '#2E6F4E', sageLight: '#E3F2EA',
             amberWarn: '#D97706', amberLight: '#FEF3C7',
-            danger: '#C93B2B', dangerLight: '#FDE8E6',
-            driveBlue: '#1A73E8', driveLight: '#E8F0FE'
+            danger: '#C93B2B', dangerLight: '#FDE8E6'
           },
           fontFamily: {
             editorial: ['Fraunces', 'serif'],
             sans: ['Plus Jakarta Sans', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace']
-          },
-          boxShadow: {
-            warm: '0 10px 30px -5px rgba(43, 27, 18, 0.07)',
-            'warm-lg': '0 20px 40px -10px rgba(43, 27, 18, 0.12)'
           }
         }
       }
     };
   </script>
 
-  <!-- Memanggil File CSS Eksternal -->
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body class="public-client-mode min-h-screen flex flex-col lg:flex-row selection:bg-terracotta selection:text-white">
+  <style>
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
+      background-color: #FAF3EB;
+      color: #2B1B12;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
 
-  <!-- MODAL LOGIN ADMIN RAHASIA (Hanya muncul jika Logo diketuk 3x) -->
-  <div id="modal-admin-login" class="fixed inset-0 z-50 hidden bg-[#06131A]/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-white rounded-[28px] max-w-sm w-full p-6 shadow-warm-lg border border-[#234B5C] space-y-5 text-center">
+    /* Mode Klien Publik: kunci tampilan hanya di #tab-website */
+    body.public-client-mode .admin-only-ui { display: none !important; }
+    body.public-client-mode .tab-section { display: none !important; }
+    body.public-client-mode #tab-website { display: block !important; }
+    body:not(.public-client-mode) .public-only-ui { display: none !important; }
+
+    /* Cegah input/select melebar di layar iPhone */
+    input, select, textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+    /* Cetak PDF bersih khusus area Invoice */
+    @media print {
+      body * { visibility: hidden !important; }
+      #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
+      #invoice-print-area {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        background: #fff !important;
+        padding: 20px !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="public-client-mode min-h-screen flex flex-col lg:flex-row">
+
+  <!-- MODAL LOGIN ADMIN -->
+  <div id="modal-admin-login" class="fixed inset-0 z-50 hidden bg-[#06131A]/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#DEC9B5] space-y-5 text-center">
       <div class="w-14 h-14 rounded-2xl bg-cream text-terracotta mx-auto flex items-center justify-center border border-[#DEC9B5]">
         <i class="ph-fill ph-lock-key text-2xl"></i>
       </div>
@@ -59,1283 +85,623 @@
         <h2 class="font-editorial text-xl font-bold text-espresso mt-1">PIN Admin FILEPHOTOKU.STD</h2>
       </div>
       <div class="space-y-3">
-        <input id="admin-pin-input" type="password" inputmode="numeric" placeholder="••••••••" onkeydown="if(event.key==='Enter') verifyAdminPin()" class="w-full px-4 py-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-center text-lg font-bold tracking-widest text-espresso focus:outline-none" />
-        <button onclick="verifyAdminPin()" class="w-full py-3 rounded-2xl bg-terracotta text-white text-xs font-bold shadow">Buka Studio OS →</button>
+        <input id="admin-pin-input" type="password" inputmode="numeric" placeholder="Masukkan PIN (Default: 2026)" onkeydown="if(event.key==='Enter') verifyAdminPin()" class="w-full px-4 py-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-center text-base font-bold tracking-widest text-espresso focus:outline-none" />
+        <button type="button" onclick="verifyAdminPin()" class="w-full py-3 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-xs font-bold shadow">Buka Studio OS →</button>
       </div>
-      <button onclick="closeAdminLoginModal()" class="text-xs text-espressoMuted font-semibold">Batal</button>
+      <button type="button" onclick="closeAdminLoginModal()" class="text-xs text-espressoMuted font-semibold">Batal</button>
     </div>
   </div>
 
-  <!-- SIDEBAR DESKTOP (Hanya tampil saat Admin aktif) -->
-  <aside class="admin-only-ui hidden lg:flex lg:flex-col lg:w-72 lg:shrink-0 bg-[#F4E8DC] border-r border-[#E6D5C3] min-h-screen sticky top-0 justify-between">
+  <!-- MODAL TAMBAH / EDIT BOOKING ADMIN -->
+  <div id="modal-booking" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-[#DEC9B5] space-y-3 my-auto">
+      <div class="flex items-center justify-between">
+        <h3 id="modal-booking-title" class="font-editorial text-lg font-bold text-espresso">Tambah Booking Klien</h3>
+        <button type="button" onclick="closeBookingModal()" class="w-8 h-8 rounded-full bg-cream text-espresso font-bold">✕</button>
+      </div>
+      <input type="hidden" id="bk-edit-id" />
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="font-bold text-espresso uppercase block mb-1">Nama Klien / Pasangan</label>
+          <input id="bk-client" type="text" placeholder="Contoh: Sakinah & Mufti" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Tanggal Lengkap</label>
+            <input id="bk-date" type="date" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono" />
+          </div>
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Kategori</label>
+            <select id="bk-category" onchange="onModalCategoryChange()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold"></select>
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-espresso uppercase block mb-1">Paket Layanan</label>
+          <select id="bk-package" onchange="onModalPackageChange()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Lokasi / Venue</label>
+            <input id="bk-venue" type="text" placeholder="Contoh: Labanasem" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
+          </div>
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">No. WhatsApp</label>
+            <input id="bk-phone" type="tel" placeholder="08xxxxxxxxxx" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-espresso uppercase block mb-1">Link Google Drive (Opsional)</label>
+          <input id="bk-drive" type="url" placeholder="https://drive.google.com/..." class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Harga Paket (Rp)</label>
+            <input id="bk-price" type="number" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" />
+          </div>
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">DP Masuk (Rp)</label>
+            <input id="bk-dp" type="number" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" />
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeBookingModal()" class="px-4 py-2.5 rounded-xl bg-beige text-espresso text-xs font-bold">Batal</button>
+        <button type="button" onclick="saveAdminBooking()" class="px-5 py-2.5 rounded-xl bg-terracotta text-white text-xs font-bold shadow">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LIHAT FOTO BUKTI BAYAR (AMAN DI SAFARI IPHONE) -->
+  <div id="modal-proof" class="fixed inset-0 z-50 hidden bg-black/75 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-3 text-center">
+      <div class="flex items-center justify-between">
+        <h3 id="proof-modal-title" class="font-bold text-sm text-espresso">Bukti Pembayaran</h3>
+        <button type="button" onclick="closeProofModal()" class="w-8 h-8 rounded-full bg-cream font-bold">✕</button>
+      </div>
+      <p id="proof-modal-sub" class="text-xs text-espressoMuted"></p>
+      <img id="proof-modal-img" src="" alt="Bukti Transfer" class="w-full max-h-[65vh] object-contain rounded-2xl border border-[#DEC9B5]" />
+    </div>
+  </div>
+
+  <!-- SIDEBAR ADMIN (DESKTOP) -->
+  <aside class="admin-only-ui hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 bg-[#F4E8DC] border-r border-[#E6D5C3] min-h-screen sticky top-0 justify-between">
     <div class="p-4 space-y-4">
       <div onclick="switchTab('dashboard')" class="cursor-pointer rounded-2xl p-4 shadow-md border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
-        <div class="text-white tracking-wider text-base font-sans flex items-baseline">
-          <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-semibold text-[#FF6B00] text-xs ml-0.5">.STD</span>
+        <div class="text-white tracking-wider text-base flex items-center justify-between">
+          <div><span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-semibold text-[#FF6B00] text-xs">.STD</span></div>
+          <span class="text-[#FF6B00] font-bold">✳</span>
         </div>
         <div class="text-[8px] tracking-[0.2em] uppercase text-white/80 mt-1">CAPTURE YOUR STORY</div>
       </div>
 
-      <button onclick="switchTab('setup')" data-tab="setup" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-beige text-espresso">
-        <span class="flex items-center gap-2"><i class="ph-fill ph-sliders-horizontal text-lg"></i> ⚙️ Atur Data & PL</span>
+      <button type="button" onclick="switchTab('setup')" data-tab="setup" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-beige text-espresso">
+        <span>⚙️ Atur Data & PL</span>
       </button>
 
-      <nav class="space-y-1">
-        <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-squares-four text-lg"></i> 1. Dashboard & Kas</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-dangerLight text-danger font-bold" id="nav-overdue-pill">2 Lewat</span>
-        </button>
-        <button onclick="switchTab('booking')" data-tab="booking" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-calendar-check text-lg"></i> 2. Booking & Drive</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-beige text-espresso font-bold" id="nav-booking-badge">4 Job</span>
-        </button>
-        <button onclick="switchTab('invoice')" data-tab="invoice" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-receipt text-lg"></i> 3. Invoice Otomatis</span>
-        </button>
-        <button onclick="switchTab('crew')" data-tab="crew" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-users-three text-lg"></i> 4. Kru, Fee & Shareloc</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-danger animate-pulse" id="crew-warning-dot"></span>
-        </button>
-        <button onclick="switchTab('gear')" data-tab="gear" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-memory text-lg"></i> 5. Gear & Memory Card</span>
-        </button>
-        <button onclick="switchTab('photosort')" data-tab="photosort" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-images text-lg"></i> 6. Sortir Foto (FP_xxx)</span>
-        </button>
-        <button onclick="switchTab('website')" data-tab="website" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">
-          <span class="flex items-center gap-2"><i class="ph-fill ph-globe-hemisphere-west text-lg"></i> 7. Katalog & Web Klien</span>
-        </button>
+      <nav class="space-y-1 text-left">
+        <button type="button" onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">1. Beranda & Kas</button>
+        <button type="button" onclick="switchTab('booking')" data-tab="booking" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">2. Booking & Drive</button>
+        <button type="button" onclick="switchTab('invoice')" data-tab="invoice" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">3. Invoice Resmi</button>
+        <button type="button" onclick="switchTab('crew')" data-tab="crew" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">4. Kru, Fee & Shareloc</button>
+        <button type="button" onclick="switchTab('photosort')" data-tab="photosort" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">5. Sortir Foto (Lightroom)</button>
+        <button type="button" onclick="switchTab('website')" data-tab="website" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-espresso">6. Pratinjau Web Klien</button>
       </nav>
     </div>
 
     <div class="p-4 border-t border-[#E6D5C3] space-y-2">
-      <button onclick="lockAdminSession()" class="w-full py-2 px-3 rounded-xl border border-[#D8C2B0] text-espressoMuted text-xs font-semibold flex items-center justify-center gap-1.5">
-        <i class="ph ph-eye"></i> Lihat Mode Klien (Lock)
-      </button>
-      <button onclick="openResetModal()" class="w-full py-2 px-3 rounded-xl border border-[#D8C2B0] text-espressoMuted text-xs font-semibold flex items-center justify-center gap-1.5">
-        <i class="ph ph-arrow-counter-clockwise"></i> Reset Data Awal
-      </button>
+      <button type="button" onclick="syncFromCloud(true)" class="w-full py-2 px-3 rounded-xl bg-sageLight text-sage text-xs font-bold">🔄 Sync Server Cloud</button>
+      <button type="button" onclick="lockAdminSession()" class="w-full py-2 px-3 rounded-xl border border-[#D8C2B0] text-espressoMuted text-xs font-semibold">🔒 Lihat Mode Klien</button>
     </div>
   </aside>
 
-  <!-- WRAPPER KONTEN UTAMA -->
-  <div class="flex-1 flex flex-col min-w-0 w-full max-w-full pb-24 lg:pb-12">
-
-    <!-- HEADER ATAS RESPONSIF (TIDAK TERPOTONG DI IPHONE) -->
-    <header class="sticky top-0 z-20 bg-cream/95 backdrop-blur-md border-b border-[#E6D5C3] px-3 sm:px-6 py-2.5 w-full">
-      <div class="max-w-7xl mx-auto flex flex-col gap-2 w-full">
-        <div class="flex items-center justify-between gap-2 w-full">
-          <!-- Ketuk Logo 3 Kali untuk Masuk Admin -->
+  <!-- KONTEN UTAMA -->
+  <div class="flex-1 flex flex-col min-w-0 w-full pb-24 lg:pb-10">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-[#E6D5C3] px-3 sm:px-6 py-2.5 w-full">
+      <div class="max-w-7xl mx-auto space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <!-- Ketuk logo 3x untuk login admin -->
           <div onclick="handleSecretLogoTap()" class="cursor-pointer select-none px-3 py-1.5 rounded-xl flex items-center gap-2 text-white shadow border border-[#1B3B48] shrink-0" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
             <div>
               <div class="text-xs tracking-wider leading-none">
                 <span class="font-extrabold">FILE</span><span class="font-light">PHOTOKU</span><span class="font-bold text-[#FF6B00] text-[10px]">.STD</span>
               </div>
-              <div class="text-[7px] tracking-[0.15em] text-white/80 uppercase mt-0.5">CAPTURE YOUR STORY</div>
+              <div class="text-[7px] tracking-[0.14em] text-white/80 uppercase mt-0.5">CAPTURE YOUR STORY</div>
             </div>
             <span class="text-[#FF6B00] font-bold text-sm">✳</span>
           </div>
 
-          <!-- Tombol Konsumen -->
           <div class="public-only-ui flex items-center gap-1.5">
-            <a href="https://wa.me/6285708001457" target="_blank" class="px-3 py-1.5 rounded-xl bg-sage text-white text-xs font-bold flex items-center gap-1 shadow-sm">
+            <a id="header-wa-link" href="https://wa.me/6285708001457" target="_blank" class="px-3 py-1.5 rounded-xl bg-sage text-white text-xs font-bold flex items-center gap-1 shadow-sm">
               <i class="ph-bold ph-whatsapp-logo"></i> Chat Admin
             </a>
           </div>
 
-          <!-- Tombol Admin -->
-          <div class="admin-only-ui flex items-center gap-1.5 shrink-0">
-            <button onclick="switchTab('setup')" class="px-2.5 py-1.5 rounded-xl bg-beige text-espresso text-xs font-bold flex items-center gap-1">
-              <i class="ph-bold ph-sliders-horizontal text-terracotta"></i> PL
-            </button>
-            <button onclick="openNewBookingModal()" class="px-3 py-1.5 rounded-xl bg-terracotta text-white text-xs font-semibold flex items-center gap-1 shadow">
-              <i class="ph-bold ph-plus-circle"></i> Booking
-            </button>
-            <button onclick="lockAdminSession()" class="lg:hidden px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] text-espresso text-xs" title="Kunci Admin">
-              <i class="ph-bold ph-lock"></i>
-            </button>
+          <div class="admin-only-ui flex items-center gap-1.5">
+            <button type="button" onclick="switchTab('setup')" class="px-2.5 py-1.5 rounded-xl bg-beige text-espresso text-xs font-bold">⇄ PL</button>
+            <button type="button" onclick="openNewBookingModal()" class="px-3 py-1.5 rounded-xl bg-terracotta text-white text-xs font-bold shadow-sm">＋ Booking</button>
+            <button type="button" onclick="syncFromCloud(true)" title="Sync Server" class="px-2.5 py-1.5 rounded-xl bg-sageLight text-sage text-xs font-bold">🔄</button>
+            <button type="button" onclick="lockAdminSession()" title="Mode Klien" class="px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] text-xs">🔒</button>
           </div>
         </div>
 
-        <!-- Bar Pencarian Khusus Admin -->
-        <div class="admin-only-ui relative w-full">
-          <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-espressoMuted text-sm"></i>
-          <input id="global-search" type="text" oninput="handleGlobalSearch(this.value)" placeholder="Cari klien, paket (Silver, Engagement)..." class="w-full pl-9 pr-16 py-1.5 bg-white border border-[#DEC9B5] rounded-full text-xs text-espresso focus:outline-none" />
-          <button onclick="quickSearchDemo()" class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-0.5 rounded-full bg-beige text-[10px] font-semibold text-espresso">Cari</button>
-          <div id="global-search-results" class="hidden absolute left-0 right-0 mt-1 bg-white rounded-2xl shadow-warm-lg border border-[#DEC9B5] p-2.5 z-40 max-h-64 overflow-y-auto"></div>
+        <!-- Bar Pencarian Admin -->
+        <div class="admin-only-ui flex items-center bg-white border border-[#DEC9B5] rounded-full px-3 py-1.5 gap-2">
+          <i class="ph ph-magnifying-glass text-espressoMuted text-sm"></i>
+          <input id="admin-search-input" type="text" placeholder="Cari klien, paket (Silver, Engagement), lokasi..." oninput="doAdminSearch()" onkeydown="if(event.key==='Enter') doAdminSearch(true)" class="flex-1 text-xs bg-transparent outline-none text-espresso" />
+          <button type="button" onclick="doAdminSearch(true)" class="px-3 py-1 rounded-full bg-beige text-espresso text-xs font-bold">Cari</button>
         </div>
       </div>
     </header>
 
-    <!-- MAIN SECTIONS -->
     <main class="max-w-7xl w-full mx-auto px-3 sm:px-6 pt-4 space-y-6">
 
-      <!-- MENU 0: SETUP & PRICELIST -->
-      <section id="tab-setup" class="tab-section space-y-5">
-        <div class="rounded-3xl bg-[#0D2A36] text-cream p-5 shadow-warm-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 class="font-editorial text-xl sm:text-2xl font-bold text-white">Master Data & Pricelist FILEPHOTOKU.STD</h2>
-            <p class="text-xs text-[#CDE0E8] mt-1">Ubah harga paket, tambah kru, atau backup data antara Laptop dan iPhone.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button onclick="exportStudioData()" class="px-3 py-2 rounded-xl bg-white/15 text-white text-xs font-semibold">Backup (.JSON)</button>
-            <button onclick="openImportModal()" class="px-3 py-2 rounded-xl bg-[#FF6B00] text-white text-xs font-bold">Import Data</button>
-          </div>
-        </div>
+      <!-- =========================================================
+           TAB 1: BERANDA / DASHBOARD ADMIN
+           ========================================================= -->
+      <section id="tab-dashboard" class="tab-section space-y-4">
+        <div class="rounded-3xl p-5 text-white shadow-lg" style="background: linear-gradient(135deg, #091B24 0%, #143642 100%);">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-[#FF6B00]">DASHBOARD OPERASIONAL</span>
+          <h1 class="font-editorial text-2xl sm:text-3xl font-bold mt-1">Selamat bekerja, FILEPHOTOKU.STD! 📸</h1>
+          <p class="text-xs text-[#CDE0E8] mt-1">Pantau DP 30%, sisa pelunasan, penugasan kru, dan progres file Google Drive.</p>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#EFE2D3] p-1.5 rounded-2xl">
-          <button onclick="switchSetupSubTab('pricelist')" id="subtab-btn-pricelist" class="py-2.5 px-3 rounded-xl text-xs font-bold bg-espresso text-white">1. Pricelist</button>
-          <button onclick="switchSetupSubTab('crew')" id="subtab-btn-crew" class="py-2.5 px-3 rounded-xl text-xs font-bold text-espresso">2. Crew & Fee</button>
-          <button onclick="switchSetupSubTab('gear')" id="subtab-btn-gear" class="py-2.5 px-3 rounded-xl text-xs font-bold text-espresso">3. Alat & Card</button>
-          <button onclick="switchSetupSubTab('profile')" id="subtab-btn-profile" class="py-2.5 px-3 rounded-xl text-xs font-bold text-espresso">4. Profil & Bank</button>
-        </div>
-
-        <div id="setup-panel-pricelist" class="setup-subpanel active space-y-4">
-          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 space-y-3">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h3 class="font-editorial text-lg font-bold">Kategori Layanan</h3>
-              <div class="flex gap-2">
-                <input id="new-service-cat-input" type="text" placeholder="Kategori baru..." class="flex-1 px-3 py-1.5 rounded-xl border border-[#DEC9B5] text-xs bg-cream" />
-                <button onclick="addServiceCategory()" class="px-3 py-1.5 rounded-xl bg-terracotta text-white text-xs font-bold">+ Jasa</button>
-              </div>
-            </div>
-            <div id="setup-service-categories-list" class="flex flex-wrap gap-2"></div>
-          </div>
-
-          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 space-y-4">
+          <div class="mt-4 p-4 rounded-2xl bg-white/10 border border-white/15 space-y-3">
             <div class="flex items-center justify-between">
-              <h3 class="font-editorial text-lg font-bold">Daftar Paket Pricelist</h3>
-              <span class="px-2.5 py-1 rounded-xl bg-sageLight text-sage text-xs font-bold" id="pricelist-count-badge"></span>
+              <span class="text-xs text-[#CDE0E8]">Total Sisa Pelunasan</span>
+              <span id="dash-unpaid-hero" class="font-mono text-lg font-extrabold text-white">Rp 0</span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 rounded-2xl bg-cream border border-[#E6D5C3]">
-              <select id="pl-new-category" class="sm:col-span-3 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold"></select>
-              <input id="pl-new-name" type="text" placeholder="Nama Paket" class="sm:col-span-3 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
-              <input id="pl-new-price" type="number" step="25000" placeholder="Harga (Rp)" class="sm:col-span-2 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs" />
-              <input id="pl-new-desc" type="text" placeholder="Rincian paket..." class="sm:col-span-3 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
-              <button onclick="addPricelistItem()" class="sm:col-span-1 py-2 rounded-xl bg-espresso text-white text-xs font-bold">Simpan</button>
-            </div>
-            <div id="setup-pricelist-container" class="space-y-2"></div>
-          </div>
-        </div>
-
-        <div id="setup-panel-crew" class="setup-subpanel space-y-4">
-          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="font-editorial text-lg font-bold">Database Tim & Standar Fee</h3>
-              <span class="px-2.5 py-1 rounded-xl bg-beige text-xs font-bold" id="crew-master-count-badge"></span>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 rounded-2xl bg-cream border border-[#E6D5C3]">
-              <input id="crew-new-name" type="text" placeholder="Nama Kru" class="sm:col-span-3 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs" />
-              <select id="crew-new-role" class="sm:col-span-3 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-semibold">
-                <option value="Fotografer Utama">Fotografer Utama</option>
-                <option value="Second Shooter">Second Shooter</option>
-                <option value="Videografer">Videografer</option>
-                <option value="Asisten Lighting & File">Asisten Lighting & File</option>
-                <option value="Editor Foto / Video">Editor Foto / Video</option>
-              </select>
-              <input id="crew-new-fee" type="number" step="25000" placeholder="Fee (Rp)" class="sm:col-span-3 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs" />
-              <input id="crew-new-wa" type="text" placeholder="No. WA" class="sm:col-span-2 px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] font-mono text-xs" />
-              <button onclick="addCrewMasterItem()" class="sm:col-span-1 py-2 rounded-xl bg-espresso text-white text-xs font-bold">+ Kru</button>
-            </div>
-            <div id="setup-crew-master-list" class="space-y-2"></div>
-          </div>
-        </div>
-
-        <div id="setup-panel-gear" class="setup-subpanel space-y-4">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 space-y-3">
-              <h3 class="font-editorial text-lg font-bold">Inventaris Kamera & Gear</h3>
-              <div class="flex flex-col sm:flex-row gap-2">
-                <input id="setup-gear-name" type="text" placeholder="Nama Alat" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-                <input id="setup-gear-holder" type="text" placeholder="Lokasi/Tas" class="sm:w-36 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-                <button onclick="addGearFromSetup()" class="px-3 py-2 rounded-xl bg-terracotta text-white text-xs font-bold">+ Alat</button>
-              </div>
-              <div id="setup-gear-list" class="space-y-2"></div>
-            </div>
-            <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 space-y-3">
-              <h3 class="font-editorial text-lg font-bold">Daftar Memory Card</h3>
-              <div class="flex flex-col sm:flex-row gap-2">
-                <input id="setup-mc-code" type="text" placeholder="Kode Card" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-                <input id="setup-mc-job" type="text" placeholder="Keterangan" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-                <button onclick="addMemoryCardFromSetup()" class="px-3 py-2 rounded-xl bg-driveBlue text-white text-xs font-bold">+ Card</button>
-              </div>
-              <div id="setup-mc-list" class="space-y-2"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="setup-panel-profile" class="setup-subpanel">
-          <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 space-y-3 max-w-2xl">
-            <h3 class="font-editorial text-lg font-bold">Profil & Rekening Studio</h3>
-            <input id="prof-brand-name" type="text" oninput="saveStudioProfile()" placeholder="Nama Brand" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold" />
-            <input id="prof-city" type="text" oninput="saveStudioProfile()" placeholder="Kota" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-            <input id="prof-wa" type="text" oninput="saveStudioProfile()" placeholder="No. WA Admin" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs" />
-            <input id="prof-bank" type="text" oninput="saveStudioProfile()" placeholder="Info Rekening Invoice" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-bold" />
-            <input id="prof-tagline" type="text" oninput="saveStudioProfile()" placeholder="Tagline Website" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-          </div>
-        </div>
-      </section>
-
-      <!-- MENU 1: DASHBOARD -->
-      <section id="tab-dashboard" class="tab-section space-y-5">
-        <div class="rounded-3xl bg-gradient-to-br from-[#071720] via-[#102E3B] to-[#1D4250] text-cream p-5 sm:p-7 shadow-warm-lg">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div class="space-y-1.5">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-[#FF6B00]">Dashboard Operasional</span>
-              <h2 class="font-editorial text-2xl sm:text-3xl font-bold text-white">Selamat bekerja, FILEPHOTOKU.STD! 📸</h2>
-              <p class="text-xs text-[#CDE0E8]">Pantau DP 30%, sisa pelunasan, penugasan kru, dan progres file Google Drive.</p>
-            </div>
-            <div class="bg-white/10 rounded-2xl p-4 border border-white/15 w-full lg:w-72">
-              <div class="flex justify-between text-xs text-[#CDE0E8]">
-                <span>Sisa Pelunasan</span>
-                <span class="px-2 py-0.5 rounded-full bg-danger text-white text-[10px] font-bold" id="dash-overdue-count"></span>
-              </div>
-              <div class="font-mono text-2xl font-bold text-white mt-1" id="dash-total-unpaid"></div>
-              <button onclick="remindAllOverdueClients()" class="w-full mt-3 py-2 rounded-xl bg-[#FF6B00] text-white text-xs font-bold">Ingatkan Pelunasan via WA</button>
-            </div>
+            <button type="button" onclick="remindUnpaidWA()" class="w-full py-2.5 rounded-xl bg-[#FF6B00] hover:bg-orange-600 text-white text-xs font-bold shadow">
+              📲 Ingatkan Pelunasan via WA
+            </button>
           </div>
         </div>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]"><span class="text-[11px] text-espressoMuted font-semibold">Belum Terbayar</span><div class="font-mono text-base sm:text-xl font-bold mt-1" id="stat-unpaid"></div><p class="text-[10px] text-espressoMuted" id="stat-unpaid-sub"></p></div>
-          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]"><span class="text-[11px] text-espressoMuted font-semibold">DP Masuk</span><div class="font-mono text-base sm:text-xl font-bold mt-1" id="stat-dp"></div><p class="text-[10px] text-espressoMuted">Kunci jadwal</p></div>
-          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]"><span class="text-[11px] text-espressoMuted font-semibold">Total Omzet</span><div class="font-mono text-base sm:text-xl font-bold text-driveBlue mt-1" id="stat-gross"></div><p class="text-[10px] text-espressoMuted">Kontrak berjalan</p></div>
-          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]"><span class="text-[11px] text-espressoMuted font-semibold">Profit Studio</span><div class="font-mono text-base sm:text-xl font-bold text-sage mt-1" id="stat-profit"></div><p class="text-[10px] text-sage font-semibold">Setelah fee kru</p></div>
+          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]">
+            <div class="text-[11px] font-semibold text-espressoMuted">Belum Terbayar</div>
+            <div id="dash-unpaid" class="font-mono text-base sm:text-lg font-extrabold text-danger mt-1">Rp 0</div>
+            <div class="text-[10px] text-espressoMuted mt-0.5">Sisa tagihan klien</div>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]">
+            <div class="text-[11px] font-semibold text-espressoMuted">DP / Kas Masuk</div>
+            <div id="dash-dp" class="font-mono text-base sm:text-lg font-extrabold text-sage mt-1">Rp 0</div>
+            <div class="text-[10px] text-espressoMuted mt-0.5">Kunci jadwal & lunas</div>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]">
+            <div class="text-[11px] font-semibold text-espressoMuted">Total Omzet</div>
+            <div id="dash-omzet" class="font-mono text-base sm:text-lg font-extrabold text-espresso mt-1">Rp 0</div>
+            <div class="text-[10px] text-espressoMuted mt-0.5">Kontrak berjalan</div>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-[#E6D5C3]">
+            <div class="text-[11px] font-semibold text-espressoMuted">Profit Studio</div>
+            <div id="dash-profit" class="font-mono text-base sm:text-lg font-extrabold text-terracotta mt-1">Rp 0</div>
+            <div class="text-[10px] text-espressoMuted mt-0.5">Setelah fee kru</div>
+          </div>
         </div>
 
-        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 space-y-3">
-          <h3 class="font-editorial text-lg font-bold">Pelacak Progres File Preview (1–3 Hari) & Edit (3–7 Hari)</h3>
-          <div id="dashboard-file-tracker" class="space-y-2.5"></div>
-        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Pelacak Progres -->
+          <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3">
+            <h2 class="font-editorial text-lg font-bold text-espresso">Pelacak Progres File Preview (1–3 Hari) & Edit (3–7 Hari)</h2>
+            <div id="dash-progress-list" class="space-y-2.5"></div>
+          </div>
 
-        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-editorial text-lg font-bold">Kalender Oktober 2026</h3>
-            <span class="px-3 py-1 rounded-full bg-terracotta text-white font-mono text-xs font-bold" id="october-booked-badge"></span>
+          <!-- Kalender Dinamis -->
+          <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <h2 id="cal-month-label" class="font-editorial text-lg font-bold text-espresso">Kalender</h2>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="changeCalMonth(-1)" class="px-2.5 py-1 rounded-lg bg-beige text-espresso text-xs font-bold">◀</button>
+                <button type="button" onclick="changeCalMonth(0)" class="px-2.5 py-1 rounded-lg bg-cream border border-[#DEC9B5] text-espresso text-[11px] font-bold">Bulan Ini</button>
+                <button type="button" onclick="changeCalMonth(1)" class="px-2.5 py-1 rounded-lg bg-beige text-espresso text-xs font-bold">▶</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-espressoMuted">
+              <div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div><div>Min</div>
+            </div>
+            <div id="dash-calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
+            <div id="dash-calendar-detail" class="pt-2 border-t border-[#EFE2D3] text-xs text-espressoMuted"></div>
           </div>
-          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-espressoMuted mb-1.5">
-            <div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div><div>Min</div>
-          </div>
-          <div id="mini-october-grid" class="grid grid-cols-7 gap-1 text-center"></div>
         </div>
       </section>
 
-      <!-- MENU 2: BOOKING -->
+      <!-- =========================================================
+           TAB 2: BOOKING & LINK GOOGLE DRIVE
+           ========================================================= -->
       <section id="tab-booking" class="tab-section space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="font-editorial text-xl sm:text-2xl font-bold">Daftar Booking & Link Google Drive</h2>
-          <div class="flex gap-2">
-            <button onclick="setBookingView('list')" class="px-3 py-1.5 rounded-xl bg-beige text-xs font-bold">Kartu</button>
-            <button onclick="setBookingView('calendar')" class="px-3 py-1.5 rounded-xl bg-beige text-xs font-bold">Kalender</button>
-            <button onclick="openNewBookingModal()" class="px-3.5 py-1.5 rounded-xl bg-terracotta text-white text-xs font-bold">+ Job Baru</button>
+          <h1 class="font-editorial text-2xl font-bold text-espresso">Daftar Booking & Link Google Drive</h1>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btn-view-list" onclick="setBookingView('list')" class="px-3 py-1.5 rounded-xl bg-espresso text-white text-xs font-bold">Kartu</button>
+            <button type="button" id="btn-view-cal" onclick="setBookingView('calendar')" class="px-3 py-1.5 rounded-xl bg-beige text-espresso text-xs font-bold">Kalender</button>
+            <button type="button" onclick="openNewBookingModal()" class="px-3.5 py-1.5 rounded-xl bg-terracotta text-white text-xs font-bold shadow">＋ Job Baru</button>
           </div>
         </div>
-        <div id="booking-category-chips" class="flex flex-wrap gap-1.5"></div>
-        <div id="booking-list-container" class="space-y-3.5"></div>
-        <div id="booking-calendar-container" class="hidden bg-white rounded-3xl border border-[#E6D5C3] p-4">
-          <div id="full-calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
-        </div>
+        <div id="booking-filter-pills" class="flex flex-wrap gap-1.5"></div>
+        <div id="booking-list-container" class="space-y-3"></div>
       </section>
 
-      <!-- MENU 3: INVOICE -->
-      <section id="tab-invoice" class="tab-section space-y-5">
+      <!-- =========================================================
+           TAB 3: GENERATOR INVOICE RESMI
+           ========================================================= -->
+      <section id="tab-invoice" class="tab-section space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="font-editorial text-xl sm:text-2xl font-bold">Generator Invoice Resmi</h2>
-          <div class="flex gap-2">
-            <button onclick="copyInvoiceWhatsApp()" class="px-3.5 py-2 rounded-xl bg-sage text-white text-xs font-bold">Kirim WA</button>
-            <button onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-espresso text-white text-xs font-bold">Cetak PDF</button>
+          <h1 class="font-editorial text-2xl font-bold text-espresso">Generator Invoice Resmi</h1>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="sendInvoiceWA()" class="px-3.5 py-2 rounded-xl bg-sage text-white text-xs font-bold shadow">📲 Kirim WA</button>
+            <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-[#0B1F29] text-white text-xs font-bold shadow">🖨️ Cetak PDF</button>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          <div class="lg:col-span-6 bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 space-y-4">
-            <select id="invoice-client-select" onchange="selectInvoiceClient(this.value)" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold"></select>
-            <div id="invoice-items-editor" class="space-y-2"></div>
-            <div class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#F0E4D7]">
-              <select id="invoice-pricelist-picker" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold"></select>
-              <button onclick="addPricelistToCurrentInvoice()" class="px-3.5 py-2 rounded-xl bg-terracotta text-white text-xs font-bold shrink-0">+ Paket</button>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          <div class="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+            <div>
+              <label class="font-bold text-espresso uppercase block mb-1">Pilih Klien / Jadwal</label>
+              <select id="inv-booking-select" onchange="selectInvoiceBooking()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold"></select>
             </div>
-            <div class="flex flex-col sm:flex-row gap-2">
-              <input id="custom-item-name" type="text" placeholder="Item tambahan..." class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-              <input id="custom-item-price" type="number" placeholder="Harga (Rp)" class="sm:w-32 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs" />
-              <button onclick="addCustomInvoiceItem()" class="px-3.5 py-2 rounded-xl bg-beige text-xs font-bold">+ Item</button>
+            <div>
+              <label class="font-bold text-espresso uppercase block mb-1">Tambah Paket / Add-On Resmi</label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <select id="inv-pkg-select" class="flex-1 px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]"></select>
+                <button type="button" onclick="addInvoicePackageItem()" class="px-4 py-2.5 rounded-xl bg-terracotta text-white font-bold shrink-0">＋ Paket</button>
+              </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#F0E4D7]">
-              <div>
-                <div class="flex justify-between text-xs mb-1"><span>DP Diterima</span><button onclick="setThirtyPercentDP()" class="text-terracotta font-bold">Set 30%</button></div>
-                <input id="invoice-dp-input" type="number" step="50000" oninput="updateInvoiceDP(this.value)" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-bold" />
+            <div class="pt-2 border-t border-[#EFE2D3] space-y-2">
+              <label class="font-bold text-espresso uppercase block">Tambah Item Kustom</label>
+              <input id="inv-custom-name" type="text" placeholder="Mis: Transport Luar Kota" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+              <div class="flex gap-2">
+                <input id="inv-custom-price" type="number" placeholder="Harga (Rp)" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono" />
+                <button type="button" onclick="addInvoiceCustomItem()" class="px-4 py-2 rounded-xl bg-beige text-espresso font-bold shrink-0">＋ Item</button>
               </div>
-              <div>
-                <label class="block text-xs mb-1">Info Rekening</label>
-                <input id="invoice-bank-input" type="text" oninput="updateInvoiceBank(this.value)" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs" />
+            </div>
+            <div class="pt-2 border-t border-[#EFE2D3] space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-espresso uppercase">DP Diterima (Rp)</label>
+                <div class="flex gap-1.5">
+                  <button type="button" onclick="setInvoiceDpPercent(30)" class="text-[11px] font-bold text-terracotta underline">Set 30%</button>
+                  <button type="button" onclick="setInvoiceDpPercent(100)" class="text-[11px] font-bold text-sage underline">Set Lunas</button>
+                </div>
               </div>
+              <input id="inv-dp-input" type="number" oninput="updateInvoiceDp(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" />
             </div>
           </div>
 
-          <div id="invoice-print-area" class="lg:col-span-6 bg-white rounded-3xl border-2 border-[#DEC9B5] p-4 sm:p-7 shadow-warm-lg space-y-4">
-            <div class="flex items-start justify-between border-b border-[#EEDFD0] pb-3">
+          <!-- Area Cetak Invoice -->
+          <div id="invoice-print-area" class="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border-2 border-[#DEC9B5] space-y-4">
+            <div class="flex items-start justify-between border-b-2 border-[#0B1F29] pb-3 gap-2">
               <div>
-                <h3 class="font-editorial text-lg font-bold text-espresso" id="inv-preview-brand">FILEPHOTOKU.STD</h3>
-                <p class="text-[11px] text-espressoMuted" id="inv-preview-city"></p>
+                <div class="font-editorial text-xl font-bold text-espresso">FILEPHOTOKU.STD <span class="text-[#FF6B00]">✳</span></div>
+                <div class="text-[11px] text-espressoMuted">Banyuwangi • WA: 085708001457 • IG: @filephotoku</div>
               </div>
               <div class="text-right">
-                <span id="inv-status-badge"></span>
-                <p class="font-mono text-[10px] text-espressoMuted mt-1" id="inv-number-display"></p>
+                <div class="text-[10px] font-bold uppercase text-terracotta">INVOICE RESMI</div>
+                <div id="inv-preview-no" class="font-mono text-xs font-bold text-espresso">#INV-000000</div>
               </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div class="p-3 rounded-2xl bg-cream"><p class="text-espressoMuted text-[10px]">Klien:</p><p class="font-bold" id="inv-client-name"></p><p class="text-[11px] text-espressoMuted" id="inv-client-date"></p></div>
-              <div class="p-3 rounded-2xl bg-cream"><p class="text-espressoMuted text-[10px]">Lokasi & Paket:</p><p class="font-bold" id="inv-client-venue"></p><p class="text-[11px] text-terracotta font-semibold truncate" id="inv-client-drive"></p></div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-cream p-3.5 rounded-2xl border border-[#E6D5C3]">
+              <div><span class="text-espressoMuted">Klien:</span> <strong id="inv-preview-client" class="text-espresso">-</strong></div>
+              <div><span class="text-espressoMuted">Tanggal:</span> <strong id="inv-preview-date" class="text-espresso">-</strong></div>
+              <div class="sm:col-span-2"><span class="text-espressoMuted">Lokasi & Paket:</span> <strong id="inv-preview-meta" class="text-espresso">-</strong></div>
             </div>
-            <div id="inv-preview-lines" class="space-y-1.5 border-b border-dashed border-[#DEC9B5] pb-3"></div>
-            <div class="space-y-1.5 text-xs">
-              <div class="flex justify-between"><span>Total Paket</span><span class="font-mono font-bold" id="inv-subtotal"></span></div>
-              <div class="flex justify-between text-sage"><span>DP Diterima (Min 30%)</span><span class="font-mono font-bold" id="inv-dp-display"></span></div>
-              <div class="flex justify-between pt-2 border-t border-[#EEDFD0] text-sm font-bold"><span>Sisa Pelunasan</span><span class="font-mono text-base text-terracotta" id="inv-remaining"></span></div>
+
+            <div id="inv-preview-items" class="space-y-2 text-xs"></div>
+
+            <div class="border-t border-[#E6D5C3] pt-3 space-y-1.5 text-xs">
+              <div class="flex justify-between"><span>Total Paket & Add-On</span><strong id="inv-preview-total" class="font-mono">Rp 0</strong></div>
+              <div class="flex justify-between text-sage"><span>DP / Pembayaran Diterima</span><strong id="inv-preview-dp" class="font-mono">Rp 0</strong></div>
+              <div class="flex justify-between text-sm font-extrabold text-terracotta pt-1 border-t border-dashed border-[#DEC9B5]">
+                <span>Sisa Pelunasan</span><span id="inv-preview-sisa" class="font-mono">Rp 0</span>
+              </div>
             </div>
-            <div class="p-3 rounded-2xl bg-cream text-[11px] text-espressoMuted">
-              <strong>Ketentuan FILEPHOTOKU.STD:</strong> DP minimal 30%, pelunasan maksimal setelah acara selesai, file preview 1–3 hari & hasil edit 3–7 hari kerja.
-              <div class="font-mono font-bold text-espresso mt-1" id="inv-bank-display"></div>
+
+            <div id="inv-preview-bank" class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] text-[11px] text-espresso"></div>
+
+            <div class="p-3 rounded-2xl bg-amberLight/60 border border-amberWarn/30 text-[11px] text-espresso leading-relaxed">
+              <strong>Ketentuan FILEPHOTOKU.STD:</strong> DP minimal 30% untuk mengunci jadwal, pelunasan maksimal setelah acara selesai, file preview dikirim 1–3 hari & hasil edit 3–7 hari kerja via Google Drive. Reschedule maksimal H-3.
             </div>
           </div>
         </div>
       </section>
 
-      <!-- MENU 4: JADWAL KRU, FEE TIM & SHARELOC (RAPI 100% DI HP) -->
-      <section id="tab-crew" class="tab-section space-y-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-terracotta">Penugasan Tim & Shareloc H-1</span>
-            <h2 class="font-editorial text-xl sm:text-2xl font-bold text-espresso">Jadwal Kru, Fee Tim & Shareloc Otomatis</h2>
-          </div>
-          <select id="crew-job-select" onchange="selectCrewJob(this.value)" class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso"></select>
+      <!-- =========================================================
+           TAB 4: KRU, FEE & SHARELOC OTOMATIS
+           ========================================================= -->
+      <section id="tab-crew" class="tab-section space-y-4">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-terracotta">PENUGASAN TIM & SHARELOC H-1</span>
+          <h1 class="font-editorial text-2xl font-bold text-espresso">Jadwal Kru, Fee Tim & Shareloc Otomatis</h1>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-warm space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#F0E4D7] pb-3">
-              <h3 class="font-editorial text-base sm:text-lg font-bold text-espresso" id="crew-panel-title"></h3>
-              <span id="crew-shortage-badge"></span>
+        <select id="crew-booking-select" onchange="renderCrew()" class="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso"></select>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3">
+            <h2 class="font-bold text-sm text-espresso">Tim Liputan & Fee Kru</h2>
+            <div id="crew-assigned-list" class="space-y-2.5"></div>
+            <div class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#EFE2D3]">
+              <input id="crew-new-role" type="text" placeholder="Tambah posisi (mis: Videografer / Editor)" class="flex-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+              <button type="button" onclick="addCrewRow()" class="px-4 py-2 rounded-xl bg-beige text-espresso text-xs font-bold shrink-0">＋ Posisi Kru</button>
             </div>
-
-            <div id="crew-roles-list" class="space-y-3"></div>
-
-            <div class="flex flex-col sm:flex-row gap-2 pt-2">
-              <input id="job-extra-role-input" type="text" placeholder="Tambah posisi kru di job ini..." class="flex-1 px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
-              <button onclick="addExtraRoleToCurrentJob()" class="px-4 py-2 rounded-xl bg-beige text-espresso text-xs font-bold">+ Posisi Kru</button>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-[#102E3B] text-cream flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div><p class="text-[11px] text-[#CDE0E8]">Total Fee Tim</p><p class="font-mono text-xl font-bold text-white" id="crew-total-fee"></p></div>
-              <div class="sm:text-right"><p class="text-[11px] text-[#CDE0E8]">Profit Bersih Studio</p><p class="font-mono text-lg font-bold text-[#6EE7B7]" id="crew-net-profit"></p></div>
+            <div class="rounded-2xl p-4 text-white space-y-1.5 text-xs" style="background: linear-gradient(135deg, #091B24 0%, #143642 100%);">
+              <div class="flex justify-between"><span>Total Fee Tim</span><strong id="crew-total-fee" class="font-mono text-amber-300">Rp 0</strong></div>
+              <div class="flex justify-between"><span>Profit Bersih Studio</span><strong id="crew-net-profit" class="font-mono text-emerald-300">Rp 0</strong></div>
             </div>
           </div>
 
-          <div class="lg:col-span-5 bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-warm space-y-4">
-            <h3 class="font-editorial text-lg font-bold text-espresso">Broadcast Shareloc & Briefing Kru</h3>
-            <div class="space-y-2.5">
-              <div>
-                <label class="text-xs font-semibold text-espressoMuted">Lokasi Acara / Venue</label>
-                <input id="crew-venue-input" type="text" oninput="updateCrewVenue(this.value)" class="w-full mt-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold" />
-              </div>
-              <div class="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label class="text-xs font-semibold text-espressoMuted">Jam Standby</label>
-                  <input id="crew-time-input" type="text" oninput="updateCrewTime(this.value)" class="w-full mt-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-semibold" />
-                </div>
-                <div>
-                  <label class="text-xs font-semibold text-espressoMuted">Memory Card</label>
-                  <input id="crew-card-input" type="text" oninput="updateCrewCardCode(this.value)" class="w-full mt-1 px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs font-semibold" />
-                </div>
-              </div>
-            </div>
-            <div class="p-3.5 rounded-2xl bg-[#E7F8EE] border border-[#B7E4C7] text-xs text-[#1B4332] overflow-hidden">
-              <p class="font-bold mb-1">📍 Briefing Liputan FILEPHOTOKU.STD</p>
-              <p id="shareloc-preview-text" class="whitespace-pre-line break-words text-[11px] leading-relaxed"></p>
-            </div>
-            <button onclick="sendSharelocToAllCrew()" class="w-full py-3 rounded-2xl bg-terracotta text-white text-xs font-bold shadow">Kirim Shareloc & Briefing (1-Klik)</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- MENU 5: GEAR & MEMORY CARD -->
-      <section id="tab-gear" class="tab-section space-y-5">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="font-editorial text-xl sm:text-2xl font-bold">Checklist Alat & Status Memory Card</h2>
-          <button onclick="returnAllGear()" class="px-3.5 py-2 rounded-xl bg-sage text-white text-xs font-bold">Kembalikan Semua ke Studio</button>
-        </div>
-        <div id="memory-card-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5"></div>
-        <div id="gear-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
-      </section>
-
-      <!-- MENU 6: SORTIR FOTO -->
-      <section id="tab-photosort" class="tab-section space-y-4">
-        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-3 text-xs">
+            <h2 class="font-bold text-sm text-espresso">Broadcast Shareloc & Briefing Kru</h2>
             <div>
-              <h2 class="font-editorial text-xl font-bold">Portal Sortir Kode File (FP_xxx)</h2>
-              <p class="text-xs text-espressoMuted">Terpilih (<span id="selected-photo-count">0</span>): <span id="selected-photo-pills" class="font-mono font-bold text-espresso"></span></p>
+              <label class="font-bold text-espresso uppercase block mb-1">Lokasi Acara / Venue</label>
+              <input id="brief-venue" type="text" oninput="updateBriefingField('venue', this.value)" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
             </div>
-            <div class="flex gap-2">
-              <button onclick="setPhotoSortFilter('all')" class="px-3 py-1.5 rounded-xl bg-beige text-xs font-bold">Semua</button>
-              <button onclick="setPhotoSortFilter('selected')" class="px-3 py-1.5 rounded-xl bg-beige text-xs font-bold">Dipilih</button>
-              <button onclick="copySelectedPhotoCodes()" class="px-3.5 py-1.5 rounded-xl bg-terracotta text-white text-xs font-bold">Salin Kode Lightroom</button>
+            <div>
+              <label class="font-bold text-espresso uppercase block mb-1">Link Google Maps</label>
+              <input id="brief-maps" type="url" oninput="updateBriefingField('mapsLink', this.value)" placeholder="https://maps.google.com/..." class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
             </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Jam Standby</label>
+                <input id="brief-time" type="text" oninput="updateBriefingField('standbyTime', this.value)" placeholder="07:00 WIB" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+              </div>
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Memory Card</label>
+                <input id="brief-card" type="text" oninput="updateBriefingField('memoryCard', this.value)" placeholder="Card #A1" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5]" />
+              </div>
+            </div>
+            <pre id="brief-preview" class="p-3 rounded-2xl bg-sageLight/70 border border-sage/30 text-[11px] text-espresso whitespace-pre-wrap break-words font-sans"></pre>
+            <button type="button" onclick="sendCrewBriefingWA()" class="w-full py-3 rounded-2xl bg-sage text-white font-bold shadow">
+              📲 Kirim Shareloc & Briefing ke WA Kru →
+            </button>
           </div>
-          <div id="photo-sort-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
         </div>
       </section>
 
-      <!-- MENU 7: KATALOG PRICELIST & BOOKING KLIEN (HALAMAN UTAMA KONSUMEN) -->
-      <section id="tab-website" class="tab-section space-y-6">
-        <!-- Hero Banner Katalog Klien -->
-        <div class="rounded-3xl p-5 sm:p-8 text-white shadow-warm-lg border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
+      <!-- =========================================================
+           TAB 5: SORTIR FOTO (LIGHTROOM FILTER)
+           ========================================================= -->
+      <section id="tab-photosort" class="tab-section space-y-4">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-terracotta">FILTER ADOBE LIGHTROOM</span>
+          <h1 class="font-editorial text-2xl font-bold text-espresso">Sortir Foto Klien (Kode FP_xxx)</h1>
+        </div>
+        <select id="sort-booking-select" onchange="renderPhotoSort()" class="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#DEC9B5] text-xs font-bold text-espresso"></select>
+        <div class="bg-white rounded-3xl p-4 sm:p-5 border border-[#E6D5C3] space-y-4 text-xs">
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Link Google Drive Preview Klien</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input id="sort-drive-input" type="url" placeholder="https://drive.google.com/drive/folders/..." class="flex-1 px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
+              <button type="button" onclick="saveSortDriveLink()" class="px-4 py-2.5 rounded-xl bg-beige text-espresso font-bold shrink-0">Simpan Link</button>
+            </div>
+          </div>
+          <div>
+            <label class="font-bold text-espresso uppercase block mb-1">Daftar Kode Foto Pilihan Klien (Pisahkan Koma / Spasi)</label>
+            <textarea id="sort-codes-input" rows="3" placeholder="Contoh: FP_012.JPG, FP_048.JPG, FP_105.JPG" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono"></textarea>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <button type="button" onclick="saveSortCodes()" class="px-4 py-2 rounded-xl bg-terracotta text-white font-bold">Simpan Pilihan</button>
+              <button type="button" onclick="copyLightroomCodes()" class="px-4 py-2 rounded-xl bg-[#0B1F29] text-white font-bold">📋 Salin Kode File (Lightroom)</button>
+              <button type="button" onclick="sendDriveToClientWA()" class="px-4 py-2 rounded-xl bg-sage text-white font-bold">📲 Kirim Link Drive ke WA</button>
+            </div>
+          </div>
+          <div id="sort-preview-chips" class="flex flex-wrap gap-1.5"></div>
+          <p class="text-[11px] text-espressoMuted bg-cream p-3 rounded-xl border border-[#E6D5C3]">
+            <strong>Cara pakai di Lightroom Classic:</strong> Masuk modul <b>Library (G)</b> → tekan <b>\</b> → pilih tab <b>Text</b> → ubah ke <b>Filename → Contains</b> → tempel (<b>Ctrl + V</b>).
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           TAB 6: ATUR PL / MASTER DATA STUDIO
+           ========================================================= -->
+      <section id="tab-setup" class="tab-section space-y-4">
+        <div class="rounded-3xl p-5 text-white shadow-lg" style="background: linear-gradient(135deg, #091B24 0%, #143642 100%);">
+          <h1 class="font-editorial text-2xl font-bold">Master Data & Pricelist FILEPHOTOKU.STD</h1>
+          <p class="text-xs text-[#CDE0E8] mt-1">Ubah harga paket, tambah kru, alat, rekening, atau backup data antar perangkat.</p>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <button type="button" onclick="exportBackupJSON()" class="px-3.5 py-2 rounded-xl bg-sage text-white text-xs font-bold">💾 Backup (.JSON)</button>
+            <label class="px-3.5 py-2 rounded-xl bg-[#FF6B00] text-white text-xs font-bold cursor-pointer">
+              📥 Import Data
+              <input type="file" accept=".json" onchange="importBackupJSON(this)" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button type="button" onclick="setSetupSubTab('pricelist')" data-sub="pricelist" class="setup-sub-btn py-2.5 rounded-xl text-xs font-bold bg-espresso text-white">1. Pricelist</button>
+          <button type="button" onclick="setSetupSubTab('crew')" data-sub="crew" class="setup-sub-btn py-2.5 rounded-xl text-xs font-bold bg-beige text-espresso">2. Crew & Fee</button>
+          <button type="button" onclick="setSetupSubTab('gear')" data-sub="gear" class="setup-sub-btn py-2.5 rounded-xl text-xs font-bold bg-beige text-espresso">3. Alat & Card</button>
+          <button type="button" onclick="setSetupSubTab('profile')" data-sub="profile" class="setup-sub-btn py-2.5 rounded-xl text-xs font-bold bg-beige text-espresso">4. Profil & Bank</button>
+        </div>
+
+        <div id="setup-content" class="space-y-4"></div>
+      </section>
+
+      <!-- =========================================================
+           TAB 7: HALAMAN KONSUMEN / KATALOG WEB KLIEN
+           ========================================================= -->
+      <section id="tab-website" class="tab-section active space-y-6">
+        <div class="rounded-3xl p-5 sm:p-8 text-white shadow-lg border border-[#1B3B48]" style="background: linear-gradient(135deg, #06131A 0%, #123340 55%, #071720 100%);">
           <span class="text-[10px] font-bold uppercase tracking-widest text-[#FF6B00]">OFFICIAL PRICELIST & ONLINE BOOKING</span>
           <h1 class="font-editorial text-2xl sm:text-4xl font-bold mt-1">FILEPHOTOKU.STD — Banyuwangi</h1>
-          <p class="text-xs sm:text-sm text-[#CDE0E8] mt-1.5 max-w-2xl" id="pub-mockup-tagline">
+          <p id="pub-tagline-text" class="text-xs sm:text-sm text-[#CDE0E8] mt-1.5 max-w-2xl">
             Capture Your Story — Wedding, Engagement, Graduation & Maternity Photography in Banyuwangi.
           </p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <!-- Kiri: Katalog Paket Resmi -->
-          <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-warm space-y-4">
-            <div>
-              <span class="text-[11px] font-bold uppercase text-terracotta">1. Pilih Kategori Dokumentasi</span>
-              <div id="pub-service-buttons" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2"></div>
+          <!-- KOLOM KIRI: KATEGORI, KATALOG PAKET, ALUR & SIMULASI BUNDLING -->
+          <div class="lg:col-span-7 space-y-5">
+            <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-sm space-y-4">
+              <div>
+                <span class="text-[11px] font-bold uppercase text-terracotta">1. Pilih Kategori Dokumentasi</span>
+                <div id="pub-service-buttons" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2"></div>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold uppercase text-terracotta">Daftar Paket & Rincian Layanan</span>
+                <div id="public-catalog-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2"></div>
+              </div>
+
+              <!-- Alur & Ketentuan -->
+              <div class="pt-4 border-t border-[#E6D5C3] space-y-3">
+                <span class="text-[11px] font-bold uppercase text-terracotta">2. Alur Booking & Transaksi Resmi</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+                    <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 01</div>
+                    <div class="text-xs font-bold text-espresso mt-0.5">Pilih Paket</div>
+                    <p class="text-[10px] text-espressoMuted mt-0.5">Pilih kategori & paket sesuai kebutuhan acara.</p>
+                  </div>
+                  <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+                    <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 02</div>
+                    <div class="text-xs font-bold text-espresso mt-0.5">Scan QRIS / BSI</div>
+                    <p class="text-[10px] text-espressoMuted mt-0.5">Bayar DP 30% atau Lunas via QRIS / BSI.</p>
+                  </div>
+                  <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+                    <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 03</div>
+                    <div class="text-xs font-bold text-espresso mt-0.5">Upload Bukti</div>
+                    <p class="text-[10px] text-espressoMuted mt-0.5">Lampirkan foto bukti transfer di formulir.</p>
+                  </div>
+                  <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
+                    <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 04</div>
+                    <div class="text-xs font-bold text-espresso mt-0.5">Jadwal Terkunci</div>
+                    <p class="text-[10px] text-espressoMuted mt-0.5">Masuk otomatis ke server Admin & WA.</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <span class="text-[11px] font-bold uppercase text-terracotta">Daftar Paket & Rincian Layanan</span>
-              <div id="public-catalog-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2"></div>
+
+            <!-- Simulasi Paket Bundling Rekanan Vendor Banyuwangi -->
+            <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-sm space-y-3 text-xs">
+              <div>
+                <span class="text-[10px] font-bold uppercase text-terracotta">ESTIMASI BIAYA ACARA</span>
+                <h3 class="font-editorial text-lg font-bold text-espresso">Simulasi Paket Bundling & Add-On Banyuwangi</h3>
+              </div>
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Paket Utama</label>
+                <select id="bundling-pkg-select" onchange="updateBundlingSim()" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold"></select>
+              </div>
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Pilih Tambahan (Add-On)</label>
+                <div id="bundling-addons-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5"></div>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5]">
+                <span class="font-bold text-espresso">Estimasi Total Bundling</span>
+                <span id="bundling-total" class="font-mono text-base font-extrabold text-terracotta">Rp 0</span>
+              </div>
+              <button type="button" onclick="copyBundlingSimulation()" class="w-full py-3 rounded-2xl bg-[#2B1B12] text-white font-bold shadow">
+                📋 Salin Simulasi Bundling
+              </button>
             </div>
           </div>
 
-          <!-- Kanan: Form Booking Langsung ke WhatsApp Admin -->
-          <div class="lg:col-span-5 bg-white rounded-3xl border-2 border-[#DEC9B5] p-5 sm:p-6 shadow-warm-lg space-y-4">
+          <!-- KOLOM KANAN: FORMULIR BOOKING & TRANSAKSI QRIS/BSI -->
+          <div id="booking-form-card" class="lg:col-span-5 bg-white rounded-3xl border-2 border-[#DEC9B5] p-5 sm:p-6 shadow-md space-y-4">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-sage">Respon Cepat via WhatsApp</span>
               <h3 class="font-editorial text-xl font-bold text-espresso">Formulir Booking Jadwal</h3>
-              <p class="text-xs text-espressoMuted" id="pub-mockup-city">⭐ 4.9 • Banyuwangi</p>
+              <p class="text-xs text-espressoMuted">⭐ 4.9 • Banyuwangi</p>
             </div>
 
             <div class="space-y-3 text-xs">
               <div>
-                <label class="font-bold text-espresso uppercase">Paket Pilihan Anda</label>
-                <select id="pub-package-select" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso"></select>
+                <label class="font-bold text-espresso uppercase block mb-1">Paket Pilihan Anda</label>
+                <select id="pub-package-select" onchange="updatePublicPaymentUI(true)" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-bold text-espresso"></select>
               </div>
               <div>
-                <label class="font-bold text-espresso uppercase">Nama Pasangan / Wisudawan</label>
-                <input id="pub-client-name" type="text" placeholder="Contoh: Rina & Bayu" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+                <label class="font-bold text-espresso uppercase block mb-1">Nama Pasangan / Wisudawan</label>
+                <input id="pub-client-name" type="text" placeholder="Contoh: Rina & Bayu" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
               </div>
-              <div class="grid grid-cols-2 gap-2.5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label class="font-bold text-espresso uppercase">Tanggal Acara</label>
-                  <input id="pub-client-day" type="number" min="1" max="31" placeholder="Tgl (1-31)" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono text-xs" />
+                  <label class="font-bold text-espresso uppercase block mb-1">Tanggal Acara (Lengkap)</label>
+                  <input id="pub-client-date" type="date" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-semibold" />
                 </div>
                 <div>
-                  <label class="font-bold text-espresso uppercase">Lokasi / Venue</label>
-                  <input id="pub-client-venue" type="text" placeholder="Lokasi di Banyuwangi" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] text-xs" />
+                  <label class="font-bold text-espresso uppercase block mb-1">Lokasi / Venue</label>
+                  <input id="pub-client-venue" type="text" placeholder="Lokasi di Banyuwangi" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
+                </div>
+              </div>
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Nomor WhatsApp Aktif</label>
+                <input id="pub-client-phone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-[#E6D5C3]">
+                <div>
+                  <label class="font-bold text-espresso uppercase block mb-1">Opsi Pembayaran</label>
+                  <select id="pub-payment-term" onchange="updatePublicPaymentUI(false)" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-bold">
+                    <option value="DP 30%">DP 30% (Kunci Slot)</option>
+                    <option value="Lunas 100%">Bayar Lunas (100%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="font-bold text-espresso uppercase block mb-1">Metode Transaksi</label>
+                  <select id="pub-payment-method" onchange="updatePublicPaymentUI(true)" class="w-full px-3 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-bold">
+                    <option value="QRIS">QRIS (Semua Bank/E-Wallet)</option>
+                    <option value="Transfer BSI">Transfer Bank BSI</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Kotak QRIS / BSI Anti-Kedip -->
+              <div id="pub-payment-instruction" class="p-3.5 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2"></div>
+
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Status Pembayaran</label>
+                <select id="pub-payment-status" class="w-full px-3 py-2.5 rounded-xl bg-white border border-[#DEC9B5] font-bold text-sage">
+                  <option value="Sudah Bayar">✅ Sudah Bayar DP / Lunas</option>
+                  <option value="Booking Dulu">⏳ Booking Jadwal Dulu (DP Menyusul)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="font-bold text-espresso uppercase block mb-1">Upload Bukti Bayar (Opsional)</label>
+                <input id="pub-payment-proof" type="file" accept="image/*" onchange="handleProofUpload(this)" class="w-full px-2.5 py-2 rounded-xl bg-white border border-[#DEC9B5] text-[11px]" />
+                <div id="pub-proof-preview" class="hidden mt-2 p-2 rounded-xl bg-sageLight border border-sage/30 flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <img id="pub-proof-img" src="" class="w-10 h-10 object-cover rounded-lg" />
+                    <span class="text-[11px] font-bold text-sage truncate">Bukti siap dikirim ke Admin</span>
+                  </div>
+                  <button type="button" onclick="clearProofUpload()" class="text-danger font-bold px-2">✕</button>
                 </div>
               </div>
             </div>
 
-            <button onclick="submitPublicBooking()" class="w-full py-3.5 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-xs sm:text-sm font-bold shadow transition flex items-center justify-center gap-2">
-              <i class="ph-bold ph-whatsapp-logo text-base"></i> Kirim Booking ke Admin FILEPHOTOKU.STD →
+            <button id="btn-submit-public" type="button" onclick="submitPublicBooking()" class="w-full py-3.5 rounded-2xl bg-terracotta hover:bg-terracottaDark text-white text-xs sm:text-sm font-bold shadow transition">
+              Kunci Jadwal & Kirim ke Server Admin →
             </button>
+
+            <div id="pub-ticket-result" class="hidden p-4 rounded-2xl bg-sageLight border-2 border-sage space-y-2 text-xs text-espresso"></div>
           </div>
         </div>
 
-        <!-- Kalkulator Bundling Vendor -->
-        <div class="bg-white rounded-3xl border border-[#E6D5C3] p-4 sm:p-6 shadow-warm space-y-4">
-          <h3 class="font-editorial text-lg sm:text-xl font-bold text-espresso">Simulasi Paket Bundling Rekanan Vendor Banyuwangi</h3>
-          <div id="vendor-ecosystem-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-          <div class="p-4 rounded-2xl bg-cream border border-[#DEC9B5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span class="text-[11px] font-bold uppercase text-terracotta" id="bundle-selected-count"></span>
-              <div class="font-mono text-xl font-bold text-espresso" id="bundle-total-price"></div>
-            </div>
-            <button onclick="copyBundleProposal()" class="px-4 py-2.5 rounded-xl bg-espresso text-white text-xs font-bold">Salin Simulasi Bundling</button>
-          </div>
-        </div>
-
-        <!-- Footer Kecil untuk Akses Admin selain Ketuk Logo 3x -->
-        <div class="public-only-ui text-center pt-4">
-          <button onclick="openAdminLoginModal()" class="text-[11px] text-espressoMuted/60 hover:text-espresso">🔒 Owner Studio Login</button>
+        <!-- Pintu Login Owner Privasi di Paling Bawah -->
+        <div class="public-only-ui text-center pt-4 pb-6">
+          <button type="button" onclick="openAdminLoginModal()" class="text-xs text-espressoMuted/70 hover:text-espresso inline-flex items-center gap-1">
+            🔒 Owner Studio Login
+          </button>
         </div>
       </section>
-
     </main>
   </div>
 
-  <!-- BOTTOM NAVIGATION BAR DI IPHONE (HANYA TAMPIL UNTUK ADMIN) -->
-  <nav class="admin-only-ui lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E6D5C3] px-1 py-1.5 flex items-center justify-around shadow-warm-lg">
-    <button onclick="switchTab('setup')" data-tab="setup" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
-      <i class="ph-fill ph-sliders-horizontal text-lg"></i><span class="text-[9px] font-bold mt-0.5">Atur PL</span>
-    </button>
-    <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-terracotta">
-      <i class="ph-fill ph-squares-four text-lg"></i><span class="text-[9px] font-semibold mt-0.5">Beranda</span>
-    </button>
-    <button onclick="switchTab('booking')" data-tab="booking" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
-      <i class="ph-fill ph-calendar-check text-lg"></i><span class="text-[9px] font-semibold mt-0.5">Booking</span>
-    </button>
-    <button onclick="switchTab('invoice')" data-tab="invoice" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
-      <i class="ph-fill ph-receipt text-lg"></i><span class="text-[9px] font-semibold mt-0.5">Invoice</span>
-    </button>
-    <button onclick="switchTab('crew')" data-tab="crew" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
-      <i class="ph-fill ph-users-three text-lg"></i><span class="text-[9px] font-semibold mt-0.5">Kru</span>
-    </button>
-    <button onclick="switchTab('photosort')" data-tab="photosort" class="mobile-nav-btn flex flex-col items-center py-1 px-2 rounded-xl text-espressoMuted">
-      <i class="ph-fill ph-images text-lg"></i><span class="text-[9px] font-semibold mt-0.5">Sortir</span>
-    </button>
+  <!-- BOTTOM NAVIGATION ADMIN (HP / IPHONE) -->
+  <nav class="admin-only-ui lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E6D5C3] grid grid-cols-6 py-1.5 text-[10px] font-bold text-espressoMuted">
+    <button type="button" onclick="switchTab('setup')" data-tab="setup" class="mob-nav flex flex-col items-center gap-0.5 py-1"><i class="ph ph-sliders text-lg"></i><span>Atur PL</span></button>
+    <button type="button" onclick="switchTab('dashboard')" data-tab="dashboard" class="mob-nav flex flex-col items-center gap-0.5 py-1"><i class="ph ph-squares-four text-lg"></i><span>Beranda</span></button>
+    <button type="button" onclick="switchTab('booking')" data-tab="booking" class="mob-nav flex flex-col items-center gap-0.5 py-1"><i class="ph ph-calendar-check text-lg"></i><span>Booking</span></button>
+    <button type="button" onclick="switchTab('invoice')" data-tab="invoice" class="mob-nav flex flex-col items-center gap-0.5 py-1"><i class="ph ph-receipt text-lg"></i><span>Invoice</span></button>
+    <button type="button" onclick="switchTab('crew')" data-tab="crew" class="mob-nav flex flex-col items-center gap-0.5 py-1"><i class="ph ph-users-three text-lg"></i><span>Kru</span></button>
+    <button type="button" onclick="switchTab('photosort')" data-tab="photosort" class="mob-nav flex flex-col items-center gap-0.5 py-1"><i class="ph ph-images text-lg"></i><span>Sortir</span></button>
   </nav>
 
-  <!-- MODAL TAMBAH BOOKING BARU -->
-  <div id="modal-new-booking" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b pb-2.5">
-        <h3 class="font-editorial text-lg font-bold">Tambah Booking Klien</h3>
-        <button onclick="closeNewBookingModal()" class="w-7 h-7 rounded-full bg-beige">✕</button>
-      </div>
-      <div class="space-y-3 text-xs">
-        <input id="modal-couple-input" type="text" placeholder="Nama Klien / Pasangan" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold" />
-        <div class="grid grid-cols-2 gap-2.5">
-          <input id="modal-day-input" type="number" min="1" max="31" value="28" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" />
-          <select id="modal-category-input" onchange="filterModalPackagesByCategory()" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-semibold"></select>
-        </div>
-        <select id="modal-package-select" onchange="applySelectedPackageToModal()" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-bold"></select>
-        <input id="modal-venue-input" type="text" placeholder="Lokasi Acara di Banyuwangi" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5]" />
-        <input id="modal-drive-input" type="text" placeholder="Link Folder Google Drive (Opsional)" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] font-mono" />
-        <div class="grid grid-cols-2 gap-2.5">
-          <input id="modal-price-input" type="number" step="50000" oninput="autoCalcModalDP()" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold" />
-          <input id="modal-dp-input" type="number" step="50000" class="w-full px-3.5 py-2.5 rounded-xl bg-cream border border-[#DEC9B5] font-mono font-bold text-sage" />
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeNewBookingModal()" class="px-4 py-2 rounded-xl bg-beige text-xs font-bold">Batal</button>
-        <button onclick="saveNewBooking()" class="px-4 py-2 rounded-xl bg-terracotta text-white text-xs font-bold">Simpan</button>
-      </div>
-    </div>
+  <!-- TOAST NOTIFIKASI -->
+  <div id="toast-box" class="fixed bottom-20 lg:bottom-6 right-4 z-50 hidden max-w-xs bg-[#081A24] text-white px-4 py-3 rounded-2xl shadow-xl border border-[#1E4352]">
+    <p id="toast-title" class="font-bold text-xs"></p>
+    <p id="toast-message" class="text-[11px] text-[#CDE0E8] mt-0.5"></p>
   </div>
 
-  <!-- MODAL IMPORT JSON -->
-  <div id="modal-import-json" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-5 space-y-3.5">
-      <div class="flex justify-between items-center"><h3 class="font-editorial text-lg font-bold">Import Data Backup (.JSON)</h3><button onclick="closeImportModal()">✕</button></div>
-      <input type="file" accept=".json" onchange="handleJsonFileUpload(event)" class="w-full text-xs" />
-      <textarea id="import-json-textarea" rows="4" placeholder="Atau tempel teks JSON di sini..." class="w-full p-3 rounded-2xl bg-cream border border-[#DEC9B5] font-mono text-[11px]"></textarea>
-      <div class="flex justify-end gap-2">
-        <button onclick="closeImportModal()" class="px-4 py-2 rounded-xl bg-beige text-xs font-bold">Batal</button>
-        <button onclick="confirmImportStudioData()" class="px-4 py-2 rounded-xl bg-terracotta text-white text-xs font-bold">Terapkan</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL RESET -->
-  <div id="modal-reset" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4">
-      <h3 class="font-editorial text-lg font-bold">Reset ke Data Awal?</h3>
-      <p class="text-xs text-espressoMuted">Seluruh paket dikembalikan ke Pricelist resmi FILEPHOTOKU.STD.</p>
-      <div class="flex justify-end gap-2">
-        <button onclick="closeResetModal()" class="px-4 py-2 rounded-xl bg-beige text-xs font-bold">Batal</button>
-        <button onclick="confirmResetAllData()" class="px-4 py-2 rounded-xl bg-danger text-white text-xs font-bold">Ya, Reset</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST -->
-  <div id="toast-box" class="fixed bottom-20 lg:bottom-6 right-4 z-50 hidden max-w-xs bg-[#081A24] text-cream px-4 py-3 rounded-2xl shadow-warm-lg border border-[#234B5C]">
-    <p class="font-bold text-xs text-white" id="toast-title"></p>
-    <p class="text-[11px] text-[#CDE0E8] mt-0.5 truncate" id="toast-message"></p>
-  </div>
-
-  <!-- Memanggil Database & Logika Aplikasi Eksternal -->
-  <script src="data.js?v=3"></script>
-  <script src="app.js?v=3"></script>
-
-  <!-- PENGUNCI OTOMATIS HALAMAN KLIEN SAAT PERTAMA DIBUKA / REFRESH -->
-  <style>
-    body.public-client-mode #tab-website {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-  </style>
-  <script>
-    function pastikanHalamanKlienMuncul() {
-      // Hanya jalankan jika sedang di Mode Klien (tombol Chat Admin muncul)
-      if (!document.body.classList.contains('public-client-mode')) return;
-
-      const webTab = document.getElementById('tab-website');
-      const sudahTampil = webTab && webTab.offsetHeight > 50;
-
-      if (!sudahTampil) {
-        // 1. Otomatis jalankan fungsi tombol "Lihat Mode Klien (Lock)"
-        const semuaTombol = document.querySelectorAll('button');
-        semuaTombol.forEach(btn => {
-          if (btn.innerText && btn.innerText.includes('Lihat Mode Klien')) {
-            btn.click();
-          }
-        });
-
-        // 2. Paksa buka kontainer #tab-website jika masih tersembunyi
-        if (typeof switchTab === 'function') switchTab('website');
-        if (webTab) {
-          webTab.classList.remove('hidden');
-          webTab.classList.add('active');
-          webTab.style.display = 'block';
-        }
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      pastikanHalamanKlienMuncul();
-      setTimeout(pastikanHalamanKlienMuncul, 400);
-      setTimeout(pastikanHalamanKlienMuncul, 1200);
-    });
-
-    // Pantau setiap 1 detik agar tidak kembali kosong setelah sinkronisasi server
-    setInterval(pastikanHalamanKlienMuncul, 1000);
-  </script>
- <!-- =====================================================================
-       MODUL FINAL: DESAIN SEIMBANG, QRIS ANTI-KEDIP, UPLOAD BUKTI & SYNC ADMIN
-       ===================================================================== -->
-  <style>
-    body.public-client-mode #tab-website {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
-    /* Perbaiki bagian atas kartu paket yang terpotong */
-    #public-catalog-cards > div {
-      padding-top: 1.15rem !important;
-      overflow: visible !important;
-    }
-  </style>
-
-  <script>
-    const FP_CLOUD_URL = 'https://filephotoku-db-default-rtdb.asia-southeast1.firebasedatabase.app';
-
-    const REKENING_STUDIO = {
-      bank: 'BSI (Bank Syariah Indonesia)',
-      nomor: '7306276721',
-      atasNama: 'MOH ZULQORNAIN ROFIQI',
-      merchantQris: 'MZRNAIN STORE, DIGITAL & KREATIF',
-      nmid: 'ID1026470533344',
-      fileQris: 'qris.jpg'
-    };
-
-    let buktiBayarBase64 = '';
-    let sedangSinkronCloud = false;
-
-    // 1. Penjaga Halaman Klien (TANPA merender ulang QRIS agar tidak kedip-kedip)
-    // Daftar cadangan paket resmi FILEPHOTOKU.STD agar dropdown tidak pernah kosong
-    const DAFTAR_PAKET_CADANGAN = [
-      { id: 'W-01', category: 'Wedding', name: 'WEDDING - SILVER 01', price: 1490000 },
-      { id: 'W-02', category: 'Wedding', name: 'WEDDING - SILVER 02', price: 1750000 },
-      { id: 'W-03', category: 'Wedding', name: 'WEDDING - MAGAZINE BOOK 01', price: 2300000 },
-      { id: 'W-04', category: 'Wedding', name: 'WEDDING - MAGAZINE BOOK 02', price: 2600000 },
-      { id: 'E-01', category: 'Engagement', name: 'ENGAGEMENT 01', price: 500000 },
-      { id: 'E-02', category: 'Engagement', name: 'ENGAGEMENT 02', price: 650000 },
-      { id: 'E-03', category: 'Engagement', name: 'ENGAGEMENT 03', price: 750000 },
-      { id: 'G-01', category: 'Graduation', name: 'GRADUATION - BASIC', price: 299000 },
-      { id: 'G-02', category: 'Graduation', name: 'GRADUATION - STANDARD', price: 350000 },
-      { id: 'G-03', category: 'Graduation', name: 'GRADUATION - PREMIUM', price: 500000 },
-      { id: 'G-04', category: 'Graduation', name: 'GRADUATION - VIDEO ONLY', price: 350000 },
-      { id: 'M-01', category: 'Maternity', name: 'MATERNITY - BASIC', price: 350000 },
-      { id: 'M-02', category: 'Maternity', name: 'MATERNITY - EXCLUSIVE', price: 550000 }
-    ];
-
-    function isiDropdownPaketOtomatis() {
-      const pkgSelect = document.getElementById('pub-package-select');
-      if (!pkgSelect) return;
-
-      // Ambil dari database admin jika tersedia, jika kosong gunakan daftar cadangan
-      const sumberPaket = (typeof appState !== 'undefined' && Array.isArray(appState.pricelist) && appState.pricelist.length > 0)
-        ? appState.pricelist
-        : DAFTAR_PAKET_CADANGAN;
-
-      if (typeof appState !== 'undefined' && (!Array.isArray(appState.pricelist) || appState.pricelist.length === 0)) {
-        appState.pricelist = sumberPaket;
-      }
-
-      // Isi opsi hanya jika dropdown masih kosong (mencegah pilihan klien ter-reset)
-      if (pkgSelect.options.length === 0) {
-        const kategoriList = [...new Set(sumberPaket.map(p => p.category || 'Lainnya'))];
-        pkgSelect.innerHTML = kategoriList.map(kat => {
-          const items = sumberPaket.filter(p => (p.category || 'Lainnya') === kat);
-          const optionsHtml = items.map(p =>
-            `<option value="${p.id}">${p.name} — Rp ${Number(p.price || 0).toLocaleString('id-ID')}</option>`
-          ).join('');
-          return `<optgroup label="${kat.toUpperCase()}">${optionsHtml}</optgroup>`;
-        }).join('');
-
-        if (typeof hitungDanTampilkanTagihan === 'function') {
-          hitungDanTampilkanTagihan();
-        }
-      }
-    }
-    function jagaTampilanKlien() {
-      if (document.body.classList.contains('public-client-mode')) {
-        const webTab = document.getElementById('tab-website');
-        if (webTab && webTab.offsetHeight < 50) {
-          document.querySelectorAll('button').forEach(btn => {
-            if (btn.innerText && btn.innerText.includes('Lihat Mode Klien')) btn.click();
-          });
-          if (typeof switchTab === 'function') switchTab('website');
-          webTab.classList.remove('hidden');
-          webTab.classList.add('active');
-          webTab.style.display = 'block';
-        }
-      }
-      // Hanya pasang kerangka 1 kali jika belum ada di layar
-      if (!document.getElementById('pub-payment-box')) {
-        pasangFormPembayaranKlien();
-      }
-      if (!document.getElementById('pub-studio-info-filler')) {
-        pasangPanelPengisiKolomKiri();
-      }
-    }
-
-    // 2. Isi ruang kosong ("lowong") di bawah daftar paket sebelah kiri agar seimbang
-    function pasangPanelPengisiKolomKiri() {
-      const catalogGrid = document.getElementById('public-catalog-cards');
-      if (!catalogGrid || document.getElementById('pub-studio-info-filler')) return;
-
-      const leftCol = catalogGrid.closest('.lg\\:col-span-7') || catalogGrid.parentElement.parentElement;
-      if (!leftCol) return;
-
-      const infoPanel = document.createElement('div');
-      infoPanel.id = 'pub-studio-info-filler';
-      infoPanel.className = 'pt-4 mt-4 border-t border-[#E6D5C3] space-y-4';
-      infoPanel.innerHTML = `
-        <div>
-          <span class="text-[11px] font-bold uppercase text-terracotta">2. Alur Booking & Transaksi Resmi (Otomatis)</span>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2">
-            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
-              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 01</div>
-              <div class="text-xs font-bold text-espresso mt-0.5">Pilih Paket</div>
-              <p class="text-[11px] text-espressoMuted mt-0.5">Klik paket sesuai acara & cek rincian fasilitasnya.</p>
-            </div>
-            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
-              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 02</div>
-              <div class="text-xs font-bold text-espresso mt-0.5">Scan QRIS / BSI</div>
-              <p class="text-[11px] text-espressoMuted mt-0.5">Bayar DP 30% atau Lunas via QRIS / Transfer BSI.</p>
-            </div>
-            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
-              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 03</div>
-              <div class="text-xs font-bold text-espresso mt-0.5">Upload Bukti</div>
-              <p class="text-[11px] text-espressoMuted mt-0.5">Lampirkan foto bukti bayar langsung di formulir web.</p>
-            </div>
-            <div class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#E6D5C3]">
-              <div class="text-[10px] font-extrabold text-terracotta">LANGKAH 04</div>
-              <div class="text-xs font-bold text-espresso mt-0.5">Jadwal Terkunci</div>
-              <p class="text-[11px] text-espressoMuted mt-0.5">Data otomatis masuk ke sistem Admin & Invoice terbit.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="p-3.5 rounded-2xl bg-cream border border-[#DEC9B5] space-y-1.5">
-            <div class="text-xs font-bold text-espresso flex items-center gap-1.5">
-              <span>✨</span> Ketentuan & Garansi Studio
-            </div>
-            <ul class="text-[11px] text-espressoMuted space-y-1 pl-4 list-disc">
-              <li><strong>Kunci Jadwal:</strong> DP minimal 30%, pelunasan maksimal saat hari acara selesai.</li>
-              <li><strong>Estimasi File:</strong> Foto preview 1–3 hari, hasil edit 3–7 hari kerja via Google Drive.</li>
-              <li><strong>Fleksibel:</strong> Bebas konsultasi konsep & lokasi area Banyuwangi dan sekitarnya.</li>
-            </ul>
-          </div>
-
-          <div class="p-3.5 rounded-2xl bg-cream border border-[#DEC9B5] space-y-1.5">
-            <div class="text-xs font-bold text-espresso flex items-center gap-1.5">
-              <span>➕</span> Layanan Tambahan (Add-On Populer)
-            </div>
-            <div class="text-[11px] text-espressoMuted space-y-1">
-              <div class="flex justify-between"><span>• Extra Durasi Liputan (Per Jam)</span><strong class="text-espresso">Rp 100.000</strong></div>
-              <div class="flex justify-between"><span>• Tambah Fotografer / Kru</span><strong class="text-espresso">Rp 300.000</strong></div>
-              <div class="flex justify-between"><span>• Video Highlight / Reels Cinematic</span><strong class="text-espresso">Rp 250.000</strong></div>
-              <div class="flex justify-between"><span>• Cetak Pigora 12R–16R / Album</span><strong class="text-espresso">Mulai Rp 125.000</strong></div>
-            </div>
-          </div>
-        </div>
-      `;
-      leftCol.appendChild(infoPanel);
-    }
-
-    // 3. Pasang Formulir Pembayaran Ringkas + Upload Bukti Transfer
-    function pasangFormPembayaranKlien() {
-      const venueInput = document.getElementById('pub-client-venue');
-      const pkgSelect = document.getElementById('pub-package-select');
-      if (!venueInput || document.getElementById('pub-payment-box')) return;
-
-      const formWrap = venueInput.closest('.space-y-3') || venueInput.parentElement.parentElement;
-      const payDiv = document.createElement('div');
-      payDiv.id = 'pub-payment-box';
-      payDiv.className = 'pt-3 mt-3 border-t border-[#E6D5C3] space-y-3 text-xs';
-      payDiv.innerHTML = `
-        <div>
-          <label class="font-bold text-espresso uppercase block mb-1">Nomor WhatsApp Aktif</label>
-          <input id="pub-client-phone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-3.5 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-semibold text-espresso" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <div>
-            <label class="font-bold text-espresso uppercase block mb-1">Opsi Pembayaran</label>
-            <select id="pub-payment-term" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-              <option value="DP 30%">DP 30% (Kunci Slot)</option>
-              <option value="Lunas 100%">Bayar Lunas (100%)</option>
-            </select>
-          </div>
-          <div>
-            <label class="font-bold text-espresso uppercase block mb-1">Metode Transaksi</label>
-            <select id="pub-payment-method" onchange="hitungDanTampilkanTagihan()" class="w-full px-3 py-2 rounded-xl bg-cream border border-[#DEC9B5] text-xs font-bold text-espresso">
-              <option value="QRIS">QRIS (Semua Bank / E-Wallet)</option>
-              <option value="Transfer BSI">Transfer Bank BSI</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Kotak QRIS / Rekening (Anti-Kedip & Lebih Ringkas) -->
-        <div id="pub-payment-instruction" class="p-3 rounded-2xl bg-[#FAF3EB] border border-[#DEC9B5] space-y-2"></div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-start">
-          <div>
-            <label class="font-bold text-espresso uppercase block mb-1">Status Pembayaran</label>
-            <select id="pub-payment-status-confirm" class="w-full px-3 py-2 rounded-xl bg-white border border-[#DEC9B5] text-xs font-bold text-sage">
-              <option value="Sudah Bayar">✅ Sudah Bayar DP / Lunas</option>
-              <option value="Booking Dulu">⏳ Booking Dulu (DP Menyusul)</option>
-            </select>
-          </div>
-          <div>
-            <label class="font-bold text-espresso uppercase block mb-1">Upload Bukti Bayar</label>
-            <input id="pub-payment-proof" type="file" accept="image/*" onchange="prosesUploadBukti(this)" class="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#DEC9B5] text-[11px] text-espresso file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-beige file:text-espresso" />
-          </div>
-        </div>
-
-        <div id="pub-proof-preview-wrap" class="hidden p-2.5 rounded-xl bg-sageLight/60 border border-sage/30 flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0">
-            <img id="pub-proof-img" src="" class="w-10 h-10 object-cover rounded-lg border border-sage" />
-            <div class="truncate">
-              <div class="text-[11px] font-bold text-sage">✅ Bukti Bayar Siap Dikirim ke Server</div>
-              <div class="text-[10px] text-espressoMuted">Otomatis masuk ke menu Booking Admin</div>
-            </div>
-          </div>
-          <button type="button" onclick="hapusBuktiBayar()" class="text-xs font-bold text-danger px-2">✕</button>
-        </div>
-
-        <div id="pub-ticket-result" class="hidden p-3.5 rounded-2xl bg-sageLight border-2 border-sage space-y-2 text-espresso"></div>
-      `;
-      formWrap.appendChild(payDiv);
-
-      const btnSubmit = document.querySelector('button[onclick*="submitPublicBooking"]');
-      if (btnSubmit) {
-        btnSubmit.id = 'btn-submit-public-booking';
-        btnSubmit.innerHTML = 'Kunci Jadwal & Kirim ke Server Admin →';
-      }
-
-      if (pkgSelect) {
-        pkgSelect.addEventListener('change', hitungDanTampilkanTagihan);
-      }
-
-      hitungDanTampilkanTagihan();
-    }
-
-    // 4. Kompres Foto Bukti Bayar Agar Ringan Masuk ke Database Firebase
-    window.prosesUploadBukti = function(input) {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const maxDim = 480;
-          let w = img.width, h = img.height;
-          if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else if (h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          buktiBayarBase64 = canvas.toDataURL('image/jpeg', 0.72);
-          const wrap = document.getElementById('pub-proof-preview-wrap');
-          const previewImg = document.getElementById('pub-proof-img');
-          if (wrap && previewImg) {
-            previewImg.src = buktiBayarBase64;
-            wrap.classList.remove('hidden');
-          }
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-
-    window.hapusBuktiBayar = function() {
-      buktiBayarBase64 = '';
-      const inp = document.getElementById('pub-payment-proof');
-      const wrap = document.getElementById('pub-proof-preview-wrap');
-      if (inp) inp.value = '';
-      if (wrap) wrap.classList.add('hidden');
-    };
-
-    // 5. Ambil Paket Aktif & Render Kotak QRIS / BSI Tanpa Kedip
-    function ambilDataPaketAktif() {
-      const pkgSelect = document.getElementById('pub-package-select');
-      if (!pkgSelect) return { id: 'G-03', category: 'Graduation', name: 'GRADUATION - PREMIUM', price: 500000 };
-
-      const val = pkgSelect.value;
-      if (typeof appState !== 'undefined' && Array.isArray(appState.pricelist)) {
-        const found = appState.pricelist.find(p => String(p.id) === String(val) || p.name === val);
-        if (found) return found;
-      }
-
-      const optText = pkgSelect.options[pkgSelect.selectedIndex] ? pkgSelect.options[pkgSelect.selectedIndex].text : '';
-      const parts = optText.split('—');
-      const namePart = (parts[0] || 'GRADUATION - PREMIUM').trim();
-      const priceMatch = (parts[1] || optText).replace(/[^0-9]/g, '');
-      let cat = 'Wedding';
-      if (namePart.toUpperCase().includes('ENGAGEMENT')) cat = 'Engagement';
-      else if (namePart.toUpperCase().includes('GRADUATION')) cat = 'Graduation';
-      else if (namePart.toUpperCase().includes('MATERNITY')) cat = 'Maternity';
-
-      return {
-        id: val || 'PKG-1',
-        category: cat,
-        name: namePart,
-        price: parseInt(priceMatch || '500000', 10)
-      };
-    }
-
-    window.hitungDanTampilkanTagihan = function() {
-      const box = document.getElementById('pub-payment-instruction');
-      if (!box) return;
-
-      const pkg = ambilDataPaketAktif();
-      const total = Number(pkg.price || 0);
-      const dp = Math.round(total * 0.3);
-
-      const termEl = document.getElementById('pub-payment-term');
-      const methodEl = document.getElementById('pub-payment-method');
-      const isLunas = termEl && termEl.value === 'Lunas 100%';
-      const nominalTagihan = isLunas ? total : dp;
-      const metode = methodEl ? methodEl.value : 'QRIS';
-      const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
-
-      // Hanya ganti struktur bila metode berubah; jika sama cukup perbarui teks nominal agar gambar tidak pernah kedip!
-      if (box.dataset.renderedMethod !== metode) {
-        box.dataset.renderedMethod = metode;
-        if (metode === 'QRIS') {
-          const fallbackQr = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(REKENING_STUDIO.merchantQris + ' NMID:' + REKENING_STUDIO.nmid);
-          box.innerHTML = `
-            <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
-              <span id="label-tagihan-aktif" class="text-espressoMuted font-semibold">Tagihan DP 30%</span>
-              <span id="nominal-tagihan-aktif" class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
-            </div>
-            <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
-              <div class="bg-white p-2 rounded-2xl border border-[#E6D5C3] shrink-0 shadow-sm">
-                <img id="img-qris-studio" src="${REKENING_STUDIO.fileQris}" alt="QRIS" class="w-32 h-32 object-contain rounded-lg mx-auto"
-                     onerror="if(!this.dataset.fb){this.dataset.fb='1'; this.src='${fallbackQr}';}" />
-              </div>
-              <div class="space-y-1 text-center sm:text-left">
-                <div class="inline-block px-2 py-0.5 rounded-md bg-orange-100 text-[#9E5231] text-[10px] font-extrabold">QRIS GPN RESMI</div>
-                <div class="text-xs font-extrabold text-espresso leading-snug">${REKENING_STUDIO.merchantQris}</div>
-                <div class="text-[10px] font-mono text-espressoMuted">NMID: ${REKENING_STUDIO.nmid}</div>
-                <p class="text-[10px] text-espressoMuted leading-relaxed pt-0.5">
-                  Scan via M-Banking (BSI, BCA, BRI, Mandiri, BNI) / DANA, GoPay, ShopeePay, lalu upload screenshot bukti di bawah.
-                </p>
-              </div>
-            </div>
-          `;
-        } else {
-          box.innerHTML = `
-            <div class="flex items-center justify-between border-b border-[#E6D5C3] pb-2">
-              <span id="label-tagihan-aktif" class="text-espressoMuted font-semibold">Tagihan DP 30%</span>
-              <span id="nominal-tagihan-aktif" class="font-mono text-sm font-extrabold text-terracotta">${formatRp(nominalTagihan)}</span>
-            </div>
-            <div class="space-y-2 pt-1">
-              <div class="text-[11px] font-bold text-espresso uppercase">${REKENING_STUDIO.bank}</div>
-              <div class="flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-[#DEC9B5]">
-                <div>
-                  <div class="font-mono text-sm font-extrabold text-espresso tracking-wide">${REKENING_STUDIO.nomor}</div>
-                  <div class="text-[10px] font-bold text-espressoMuted">A.N. ${REKENING_STUDIO.atasNama}</div>
-                </div>
-                <button type="button" onclick="navigator.clipboard.writeText('${REKENING_STUDIO.nomor}'); alert('Nomor Rekening BSI ${REKENING_STUDIO.nomor} berhasil disalin!');" class="px-3 py-1.5 rounded-lg bg-beige hover:bg-terracotta hover:text-white text-espresso text-[11px] font-bold transition">
-                  Salin Rek
-                </button>
-              </div>
-            </div>
-          `;
-        }
-      } else {
-        const lbl = document.getElementById('label-tagihan-aktif');
-        const nom = document.getElementById('nominal-tagihan-aktif');
-        if (lbl) lbl.innerText = isLunas ? 'Tagihan Lunas (100%)' : 'Tagihan DP 30%';
-        if (nom) nom.innerText = formatRp(nominalTagihan);
-      }
-    };
-
-    // 6. Gabungkan Data Booking Lokal & Cloud agar Booking Klien Tidak Pernah Hilang
-    function gabungkanDaftarBooking(lokal = [], cloud = []) {
-      const map = new Map();
-      cloud.forEach(b => { if (b && b.id) map.set(String(b.id), b); });
-      lokal.forEach(b => {
-        if (!b || !b.id) return;
-        const k = String(b.id);
-        if (!map.has(k) || (b.updatedAt || 0) >= (map.get(k).updatedAt || 0)) {
-          map.set(k, Object.assign({}, map.get(k) || {}, b));
-        }
-      });
-      return Array.from(map.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    }
-
-    // 7. Tarik Data Booking dari Firebase ke Halaman Admin Secara Otomatis
-    window.tarikDataBookingDariCloud = async function() {
-      if (sedangSinkronCloud) return;
-      try {
-        sedangSinkronCloud = true;
-        const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
-        if (!res.ok) return;
-        const cloudData = await res.json();
-        if (cloudData && Array.isArray(cloudData.bookings) && typeof appState !== 'undefined') {
-          const gabungan = gabungkanDaftarBooking(appState.bookings || [], cloudData.bookings);
-          appState.bookings = gabungan;
-          const key = typeof STORAGE_KEY !== 'undefined' ? STORAGE_KEY : 'filephotoku_std_db_v1';
-          localStorage.setItem(key, JSON.stringify(appState));
-          if (typeof renderAll === 'function') renderAll();
-          tampilkanBadgeBuktiDiAdmin();
-        }
-      } catch (e) {
-        console.warn('Gagal tarik cloud:', e);
-      } finally {
-        sedangSinkronCloud = false;
-      }
-    };
-
-    // 8. Simpan Booking Klien ke Memori Admin + Firebase + Tampilkan Tiket Resmi di Web
-    window.submitPublicBooking = async function() {
-      const nameInput = document.getElementById('pub-client-name');
-      const dayInput = document.getElementById('pub-client-day');
-      const venueInput = document.getElementById('pub-client-venue');
-      const phoneInput = document.getElementById('pub-client-phone');
-      const termSelect = document.getElementById('pub-payment-term');
-      const methodSelect = document.getElementById('pub-payment-method');
-      const statusSelect = document.getElementById('pub-payment-status-confirm');
-
-      const clientName = (nameInput ? nameInput.value : '').trim();
-      const day = parseInt(dayInput ? dayInput.value : '0', 10);
-      const venue = (venueInput ? venueInput.value : '').trim() || 'Banyuwangi';
-      const phone = (phoneInput ? phoneInput.value : '').trim() || '-';
-      const term = termSelect ? termSelect.value : 'DP 30%';
-      const method = methodSelect ? methodSelect.value : 'QRIS';
-      const statusConfirm = statusSelect ? statusSelect.value : 'Sudah Bayar';
-
-      if (!clientName || !day || day < 1 || day > 31) {
-        alert('Mohon isi Nama Pasangan/Wisudawan dan Tanggal Acara (1-31) terlebih dahulu.');
-        return;
-      }
-
-      const pkg = ambilDataPaketAktif();
-      const total = Number(pkg.price || 0);
-      const dpNominal = Math.round(total * 0.3);
-      const nominalBayar = term === 'Lunas 100%' ? total : dpNominal;
-      const sudahBayar = statusConfirm.includes('Sudah Bayar');
-      const kodeInvoice = 'INV-' + String(Date.now()).slice(-6);
-
-      // Gunakan struktur yang 100% dikenali oleh Menu Booking, Dashboard Kas, & Invoice Admin
-      const templateDasar = (typeof appState !== 'undefined' && Array.isArray(appState.bookings) && appState.bookings[0])
-        ? JSON.parse(JSON.stringify(appState.bookings[0]))
-        : {};
-
-      const newBooking = Object.assign({}, templateDasar, {
-        id: 'BK-' + Date.now(),
-        invoiceCode: kodeInvoice,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        client: clientName,
-        clientName: clientName,
-        phone: phone,
-        day: day,
-        date: `${day} Nov 2026`,
-        category: pkg.category || 'Graduation',
-        packageId: pkg.id,
-        pkgId: pkg.id,
-        packageName: pkg.name,
-        price: total,
-        transport: 0,
-        dp: sudahBayar ? nominalBayar : 0,
-        targetDp: dpNominal,
-        paymentMethod: method,
-        paymentTerm: term,
-        paymentStatus: sudahBayar ? `Lunas ${term} (${method})` : 'Menunggu DP',
-        proofImage: buktiBayarBase64 || '',
-        status: sudahBayar ? (term === 'Lunas 100%' ? 'Lunas' : 'DP Masuk') : 'Booking Baru',
-        stage: 'Booking',
-        venue: venue,
-        location: venue,
-        driveLink: '',
-        selectedPhotos: [],
-        addons: [],
-        customItems: [],
-        crew: [{ role: 'Fotografer Utama', name: 'Kamu (Owner FILEPHOTOKU.STD)', fee: 0 }]
-      });
-
-      const btnSubmit = document.getElementById('btn-submit-public-booking');
-      if (btnSubmit) {
-        btnSubmit.disabled = true;
-        btnSubmit.innerText = '⏳ Menyimpan Data ke Server Admin...';
-      }
-
-      try {
-        // A. Simpan langsung ke memori appState & LocalStorage dengan kunci asli data.js
-        const keyStorage = typeof STORAGE_KEY !== 'undefined' ? STORAGE_KEY : 'filephotoku_std_db_v1';
-        if (typeof appState !== 'undefined') {
-          appState.bookingFilter = 'All';
-          if (!Array.isArray(appState.bookings)) appState.bookings = [];
-          appState.bookings.unshift(newBooking);
-          localStorage.setItem(keyStorage, JSON.stringify(appState));
-        }
-
-        // B. Gabungkan dan simpan ke Cloud Firebase
-        const res = await fetch(`${FP_CLOUD_URL}/studioData.json?t=${Date.now()}`);
-        let cloudData = res.ok ? await res.json() : null;
-        if (!cloudData || typeof cloudData !== 'object') {
-          cloudData = typeof appState !== 'undefined' ? JSON.parse(JSON.stringify(appState)) : { bookings: [] };
-        }
-        cloudData.bookings = gabungkanDaftarBooking(
-          typeof appState !== 'undefined' ? appState.bookings : [newBooking],
-          Array.isArray(cloudData.bookings) ? cloudData.bookings : []
-        );
-        delete cloudData.isUnlocked;
-        delete cloudData.activeTab;
-
-        await fetch(`${FP_CLOUD_URL}/studioData.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cloudData)
-        });
-
-        if (typeof renderAll === 'function') renderAll();
-      } catch (err) {
-        console.warn('Kendala jaringan cloud:', err);
-      }
-
-      const formatRp = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
-      const tujuanBayar = method === 'QRIS'
-        ? `QRIS (${REKENING_STUDIO.merchantQris})`
-        : `BSI ${REKENING_STUDIO.nomor} a.n. ${REKENING_STUDIO.atasNama}`;
-
-      const waText =
-        `Halo Admin *FILEPHOTOKU.STD*, saya sudah mengisi Booking & Pembayaran di Web:\n\n` +
-        `• *Kode Tiket:* #${kodeInvoice}\n` +
-        `• *Nama Klien:* ${clientName}\n` +
-        `• *No. WA:* ${phone}\n` +
-        `• *Paket Pilihan:* [${pkg.category}] ${pkg.name}\n` +
-        `• *Tanggal Acara:* Tanggal ${day}\n` +
-        `• *Lokasi Venue:* ${venue}\n` +
-        `• *Harga Paket:* ${formatRp(total)}\n` +
-        `• *Nominal Dibayar:* ${term} (${formatRp(nominalBayar)})\n` +
-        `• *Metode Transaksi:* *${tujuanBayar}*\n` +
-        `• *Bukti di Web:* ${buktiBayarBase64 ? 'Sudah Diupload ke Server Admin ✅' : 'Menyusul di Chat WA'}\n\n` +
-        `Mohon dicek di Dashboard Admin FILEPHOTOKU.STD. Terima kasih!`;
-
-      const waUrl = `https://api.whatsapp.com/send?phone=6285708001457&text=${encodeURIComponent(waText)}`;
-
-      // C. Tampilkan Tiket Bukti Booking Resmi langsung di layar Web & kembalikan tombol seperti semula
-      const ticketBox = document.getElementById('pub-ticket-result');
-      if (ticketBox) {
-        ticketBox.classList.remove('hidden');
-        ticketBox.innerHTML = `
-          <div class="flex items-center justify-between border-b border-sage/30 pb-1.5">
-            <span class="text-xs font-extrabold text-sage">✅ TERCATAT DI SERVER ADMIN</span>
-            <span class="font-mono text-xs font-bold bg-white px-2 py-0.5 rounded border border-sage">#${kodeInvoice}</span>
-          </div>
-          <div class="text-[11px] space-y-0.5 pt-1">
-            <div><strong>Klien:</strong> ${clientName} (Tgl ${day} • ${venue})</div>
-            <div><strong>Paket:</strong> ${pkg.name}</div>
-            <div><strong>Transaksi:</strong> ${term} — <strong>${formatRp(nominalBayar)}</strong> via ${method}</div>
-          </div>
-          <a href="${waUrl}" target="_blank" class="mt-2 block w-full text-center py-2 rounded-xl bg-sage text-white text-xs font-bold shadow">
-            📲 Kirim Notifikasi ke WhatsApp Admin →
-          </a>
-        `;
-      }
-
-      if (btnSubmit) {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '✅ Berhasil Tersimpan! Kirim Booking Baru →';
-      }
-
-      // Buka WA di tab baru agar halaman web tidak terputus
-      window.open(waUrl, '_blank');
-    };
-
-    // 9. Tampilkan Tombol Lihat Foto Bukti Transfer di Kartu Booking Admin
-    function tampilkanBadgeBuktiDiAdmin() {
-      if (typeof appState === 'undefined' || !Array.isArray(appState.bookings)) return;
-      const bookingSection = document.getElementById('tab-booking');
-      if (!bookingSection) return;
-
-      appState.bookings.forEach(bk => {
-        if (!bk.paymentMethod && !bk.proofImage) return;
-        const cards = bookingSection.querySelectorAll('div');
-        cards.forEach(card => {
-          if (card.children.length > 1 && card.innerText && card.innerText.includes(bk.client) && !card.querySelector('.badge-bukti-fp')) {
-            const bar = document.createElement('div');
-            bar.className = 'badge-bukti-fp mt-2 pt-2 border-t border-[#E6D5C3] flex flex-wrap items-center justify-between gap-2 text-[11px]';
-            bar.innerHTML = `
-              <span class="px-2.5 py-1 rounded-lg bg-amberLight text-espresso font-bold">
-                💳 ${bk.paymentMethod || 'QRIS'} • ${bk.paymentTerm || 'DP 30%'}
-              </span>
-              ${bk.proofImage ? `<button type="button" onclick="lihatFotoBuktiBayar('${bk.id}')" class="px-2.5 py-1 rounded-lg bg-sage text-white font-bold">👁️ Lihat Foto Bukti Bayar</button>` : `<span class="text-espressoMuted">Bukti via WA</span>`}
-            `;
-            card.appendChild(bar);
-          }
-        });
-      });
-    }
-
-    window.lihatFotoBuktiBayar = function(bookingId) {
-      const bk = (appState.bookings || []).find(b => String(b.id) === String(bookingId));
-      if (!bk || !bk.proofImage) return;
-      const w = window.open('', '_blank', 'width=480,height=640');
-      w.document.write(`
-        <html><head><title>Bukti Bayar - ${bk.client}</title></head>
-        <body style="font-family:sans-serif;text-align:center;background:#FAF3EB;padding:20px;">
-          <h3 style="margin-bottom:4px;">Bukti Pembayaran ${bk.client}</h3>
-          <p style="font-size:13px;color:#555;margin-top:0;">${bk.packageName} • ${bk.paymentMethod} (${bk.paymentTerm})</p>
-          <img src="${bk.proofImage}" style="max-width:100%;border-radius:16px;border:2px solid #DEC9B5;box-shadow:0 8px 24px rgba(0,0,0,0.12);" />
-        </body></html>
-      `);
-    };
-
-    // Perbarui nominal saat klik kartu paket atau pindah tab Admin
-    document.addEventListener('click', (e) => {
-      const txt = (e.target && e.target.innerText) ? e.target.innerText : '';
-      if (txt.includes('Pilih Paket Ini')) {
-        const card = e.target.closest('div');
-        const pkgSelect = document.getElementById('pub-package-select');
-        if (card && pkgSelect) {
-          Array.from(pkgSelect.options).forEach(opt => {
-            const namaPaket = opt.text.split('—')[0].trim();
-            if (namaPaket && card.innerText.includes(namaPaket)) {
-              pkgSelect.value = opt.value;
-            }
-          });
-        }
-        setTimeout(hitungDanTampilkanTagihan, 100);
-      }
-      if (txt.includes('Booking & Drive') || txt.includes('Dashboard') || txt.includes('Invoice') || txt.includes('Buka Studio OS')) {
-        if (typeof appState !== 'undefined') appState.bookingFilter = 'All';
-        setTimeout(tarikDataBookingDariCloud, 200);
-      }
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      jagaTampilanKlien();
-      tarikDataBookingDariCloud();
-    });
-
-    setInterval(jagaTampilanKlien, 1200);
-    setInterval(tarikDataBookingDariCloud, 7000);
-  </script>
+  <!-- ?v=5 memaksa browser iPhone/Chrome membuang cache file lama -->
+  <script src="data.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
